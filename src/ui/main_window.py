@@ -225,9 +225,9 @@ class MainWindow(QMainWindow):
         dist_page = self.create_distribution_page()
         self.content_stack.addWidget(dist_page)
         
-        # Reports page
-        reports_page = self.create_placeholder_page("Reports",
-            "Financial, impact, and stock status reports")
+        # Reports page (functional)
+        from ui.reports_page import ReportsPage
+        reports_page = ReportsPage(self.service.db_manager.db_path)
         self.content_stack.addWidget(reports_page)
     
     def create_intake_page(self) -> QWidget:
