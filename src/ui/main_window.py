@@ -497,16 +497,16 @@ class MainWindow(QMainWindow):
 
     
     def show_financial_report(self):
-        """Show financial report."""
-        QMessageBox.information(self, "Financial Report", "Financial report - Coming soon!")
+        """Show financial report page."""
+        self.content_stack.setCurrentIndex(4)  # Reports page
     
     def show_impact_report(self):
-        """Show impact report."""
-        QMessageBox.information(self, "Impact Report", "Impact report - Coming soon!")
+        """Show impact report page."""
+        self.content_stack.setCurrentIndex(4)  # Reports page
     
     def show_stock_status(self):
-        """Show stock status report."""
-        QMessageBox.information(self, "Stock Status", "Stock status report - Coming soon!")
+        """Show stock status report page."""
+        self.content_stack.setCurrentIndex(4)  # Reports page
     
     def show_about(self):
         """Show about dialog."""
