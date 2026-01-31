@@ -1,6 +1,6 @@
-# PantryTracker Development Roadmap
+# AIOps Studio - Inventory Development Roadmap
 
-**Project:** PantryTracker - Open Source Inventory System for Food Pantries  
+**Project:** AIOps Studio - Inventory - Open Source Inventory System for Food Pantries  
 **Version:** 1.0 MVP  
 **Last Updated:** 2026-01-31  
 **Status:** Planning Phase

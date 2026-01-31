@@ -1,6 +1,6 @@
-# PantryTracker Development Log
+# AIOps Studio - Inventory Development Log
 
-**Project:** PantryTracker - Open Source Inventory System  
+**Project:** AIOps Studio - Inventory - Open Source Inventory System  
 **Lead Developer:** Senior Python Developer  
 **Started:** 2026-01-31
 
@@ -8,7 +8,7 @@
 
 ## Purpose
 
-This development log tracks daily progress, technical decisions, challenges encountered, and solutions implemented during the PantryTracker development lifecycle. It serves as both a historical record and a knowledge base for future developers.
+This development log tracks daily progress, technical decisions, challenges encountered, and solutions implemented during the AIOps Studio - Inventory development lifecycle. It serves as both a historical record and a knowledge base for future developers.
 
 ---
 
@@ -91,7 +91,7 @@ This ensures accurate COGS calculation when mixing donations ($0 cost) with purc
 
 Proposed directory structure:
 ```
-PantryTracker/
+AIOpsStudio-Inventory/
 ├── src/
 │   ├── main.py                 # Application entry point
 │   ├── models/                 # Data models
