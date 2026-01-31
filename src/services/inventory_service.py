@@ -462,13 +462,16 @@ class InventoryService:
             """, (new_quantity, new_cost_basis, item_id))
             
             # Create transaction record (negative quantity for distribution)
+            # Ensure reason_code is a string (handle Enum if passed)
+            reason_str = reason_code.value if hasattr(reason_code, 'value') else reason_code
+            
             cursor.execute("""
                 INSERT INTO inventory_transactions
                 (item_id, transaction_type, quantity_change, unit_cost_cents,
                  total_financial_impact_cents, reason_code, notes)
                 VALUES (?, ?, ?, ?, ?, ?, ?)
             """, (item_id, TransactionType.DISTRIBUTION.value, -quantity,
-                  unit_cost_cents, total_financial_impact_cents, reason_code, notes))
+                  unit_cost_cents, total_financial_impact_cents, reason_str, notes))
             
             transaction_id = cursor.lastrowid
             
@@ -507,7 +510,7 @@ class InventoryService:
         query = """
             SELECT * FROM inventory_transactions 
             WHERE item_id = ?
-            ORDER BY transaction_date DESC
+            ORDER BY transaction_date DESC, id DESC
         """
         
         if limit:
