@@ -31,7 +31,7 @@ exe = EXE(
     a.scripts,
     [],
     exclude_binaries=True,
-    name='AIOpsInventory',
+    name='BlockStock',
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,
@@ -42,7 +42,9 @@ exe = EXE(
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
+    icon=os.path.join(project_root, 'resources', 'icons', 'icon.ico'),
 )
+
 coll = COLLECT(
     exe,
     a.binaries,
@@ -51,5 +53,5 @@ coll = COLLECT(
     strip=False,
     upx=True,
     upx_exclude=[],
-    name='AIOpsInventory',
+    name='BlockStock',
 )
