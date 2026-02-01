@@ -27,7 +27,7 @@ Open **Command Prompt** (cmd.exe) or **PowerShell** in the project folder and ru
 :: 1. Create virtual environment
 python -m venv venv
 
-:: 2. Activate it
+:: 2. Activate it 
 venv\Scripts\activate
 
 :: 3. Install dependencies
@@ -39,10 +39,11 @@ pip install pyinstaller
 
 We have included a one-click build script for Windows.
 
-1. Double-click `build_windows.bat` in the project folder.
+1. Double-click `bld.windows.ps1` in the project folder.
 2. OR run it from the command line:
    ```cmd
-   build_windows.bat
+   bld.windows.ps1
+   
    ```
 
 The script will:
