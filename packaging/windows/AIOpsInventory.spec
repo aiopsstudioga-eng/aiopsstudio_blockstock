@@ -1,14 +1,20 @@
 # -*- mode: python ; coding: utf-8 -*-
+import os
 
 block_cipher = None
 
+# Get the directory of this spec file
+spec_root = os.path.abspath(os.path.dirname(__file__))
+# Calculate project root (2 levels up: packaging/windows -> project_root)
+project_root = os.path.abspath(os.path.join(spec_root, '..', '..'))
+
 a = Analysis(
-    ['../../src/main.py'],
+    [os.path.join(project_root, 'src', 'main.py')],
     pathex=[],
     binaries=[],
     datas=[
-        ('../../src/database/schema.sql', 'src/database'),
-        ('../../resources', 'resources')
+        (os.path.join(project_root, 'src', 'database', 'schema.sql'), os.path.join('src', 'database')),
+        (os.path.join(project_root, 'resources'), 'resources')
     ],
     hiddenimports=['sqlite3', 'PyQt6', 'pandas', 'reportlab'],
     hookspath=[],
