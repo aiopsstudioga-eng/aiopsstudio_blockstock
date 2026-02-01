@@ -3,14 +3,12 @@ import os
 
 block_cipher = None
 
-# Get the directory of this spec file
-spec_root = os.path.abspath(os.path.dirname(__file__))
-# Calculate project root (2 levels up: packaging/windows -> project_root)
-project_root = os.path.abspath(os.path.join(spec_root, '..', '..'))
+# Since the build script runs from the project root, use the current working directory
+project_root = os.getcwd()
 
 a = Analysis(
     [os.path.join(project_root, 'src', 'main.py')],
-    pathex=[],
+    pathex=[os.path.join(project_root, 'src')],
     binaries=[],
     datas=[
         (os.path.join(project_root, 'src', 'database', 'schema.sql'), os.path.join('src', 'database')),
