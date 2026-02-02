@@ -95,7 +95,18 @@ if ($Cert) {
         Write-Warning "Signing failed: $_"
     }
 } else {
-    Write-Host "[INFO] No code signing certificate found (Subject: $CertSubject). Skipping signing." -ForegroundColor Yellow
+    Write-Host "[INFO] No code signing certificate found. Attempting to create one..." -ForegroundColor Yellow
+    try {
+        $Cert = New-SelfSignedCertificate -Type CodeSigningCert -Subject $CertSubject -KeySpec Signature -TextExtension @("2.5.29.37={text}1.3.6.1.5.5.7.3.3")
+        Write-Host "[SUCCESS] Created self-signed certificate: $($Cert.Thumbprint)" -ForegroundColor Green
+        
+        # Try signing again
+        Set-AuthenticodeSignature -FilePath $ExePath -Certificate $Cert -TimestampServer "http://timestamp.digicert.com"
+        Write-Host "[SUCCESS] Executable signed." -ForegroundColor Green
+    } catch {
+        Write-Warning "Could not create certificate or sign executable. Run script as Administrator."
+        Write-Warning "Error: $_"
+    }
 }
 
 Write-Host "`nDone." -ForegroundColor Cyan
