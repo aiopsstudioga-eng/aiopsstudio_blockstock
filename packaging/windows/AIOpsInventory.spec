@@ -2,8 +2,6 @@
 import os
 
 block_cipher = None
-
-# Since the build script runs from the project root, use the current working directory
 project_root = os.getcwd()
 
 a = Analysis(
@@ -24,6 +22,7 @@ a = Analysis(
     cipher=block_cipher,
     noarchive=False,
 )
+
 pyz = PYZ(a.pure, a.zipped_data, cipher=block_cipher)
 
 exe = EXE(
@@ -31,7 +30,7 @@ exe = EXE(
     a.scripts,
     [],
     exclude_binaries=True,
-    name='BlockStock',
+    name='BlockStock', # The internal name for the executable 
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,
@@ -53,5 +52,5 @@ coll = COLLECT(
     strip=False,
     upx=True,
     upx_exclude=[],
-    name='BlockStock',
+    name='BlockStock', # The folder name inside dist\ [cite: 3]
 )
