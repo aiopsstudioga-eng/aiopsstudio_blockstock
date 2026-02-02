@@ -1,5 +1,5 @@
 """
-Main window for AIOps Studio - Inventory.
+Main window for BlockTracker.
 
 Windows main application window with navigation.
 """
@@ -33,7 +33,7 @@ class MainWindow(QMainWindow):
         
     def init_ui(self):
         """Initialize user interface."""
-        self.setWindowTitle("AIOps Studio - Inventory")
+        self.setWindowTitle("BlockTracker")
         self.setMinimumSize(1000, 700)
         
         # Set platform-appropriate font
@@ -173,7 +173,7 @@ class MainWindow(QMainWindow):
         layout.setSpacing(0)
         
         # App title
-        title = QLabel("AIOps Studio")
+        title = QLabel("BlockTracker")
         title.setStyleSheet("font-size: 16pt; font-weight: bold; padding: 20px;")
         title.setAlignment(Qt.AlignmentFlag.AlignCenter)
         layout.addWidget(title)
@@ -512,9 +512,9 @@ class MainWindow(QMainWindow):
         """Show about dialog."""
         QMessageBox.about(
             self,
-            "About AIOps Studio - Inventory",
-            "<h2>AIOps Studio - Inventory</h2>"
+            "About BlockTracker",
+            "<h2>BlockTracker</h2>"
             "<p>Version 0.1.0-alpha</p>"
             "<p>Professional inventory management for food pantries</p>"
-            "<p>© 2026 AIOps Studio</p>"
+            "<p>© 2026 AI Ops Studio LLC </p>"
         )
