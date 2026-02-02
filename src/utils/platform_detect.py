@@ -1,19 +1,10 @@
-"""
-Platform detection utilities for cross-platform UI.
-
-Detects the operating system and provides platform-specific configurations.
-"""
-
 import platform
 from enum import Enum
 
 
 class Platform(Enum):
     """Supported platforms."""
-    MACOS = "macos"
     WINDOWS = "windows"
-    LINUX = "linux"
-    UNKNOWN = "unknown"
 
 
 def get_platform() -> Platform:
@@ -21,18 +12,9 @@ def get_platform() -> Platform:
     Detect the current platform.
     
     Returns:
-        Platform: Current operating system
+        Platform: Always returns WINDOWS for this fork
     """
-    system = platform.system()
-    
-    if system == 'Darwin':
-        return Platform.MACOS
-    elif system == 'Windows':
-        return Platform.WINDOWS
-    elif system == 'Linux':
-        return Platform.LINUX
-    else:
-        return Platform.UNKNOWN
+    return Platform.WINDOWS
 
 
 def get_font_family() -> str:
@@ -42,14 +24,7 @@ def get_font_family() -> str:
     Returns:
         str: Font family name
     """
-    current_platform = get_platform()
-    
-    if current_platform == Platform.MACOS:
-        return "SF Pro"  # San Francisco
-    elif current_platform == Platform.WINDOWS:
-        return "Segoe UI"
-    else:
-        return "Arial"  # Fallback
+    return "Segoe UI"
 
 
 def get_modifier_key() -> str:
@@ -57,14 +32,9 @@ def get_modifier_key() -> str:
     Get the platform-appropriate modifier key for shortcuts.
     
     Returns:
-        str: 'Ctrl' for Windows/Linux, 'Cmd' for macOS
+        str: 'Ctrl' for Windows
     """
-    current_platform = get_platform()
-    
-    if current_platform == Platform.MACOS:
-        return "Cmd"
-    else:
-        return "Ctrl"
+    return "Ctrl"
 
 
 def should_use_native_menubar() -> bool:
@@ -72,6 +42,6 @@ def should_use_native_menubar() -> bool:
     Determine if native menu bar should be used.
     
     Returns:
-        bool: True for macOS (global menu bar), False otherwise
+        bool: Always False for Windows
     """
-    return get_platform() == Platform.MACOS
+    return False

@@ -29,6 +29,25 @@ Each entry follows this structure:
 
 ## Development Entries
 
+### 2026-02-01 | Platform Refocus
+
+**Phase:** Refactoring  
+**Focus:** Windows 11 Fork  
+
+#### Accomplishments
+- 🧹 Removed MacOS specific code and build scripts
+- 📝 Updated roadmap and README to reflect Windows-only scope
+- 🔧 Hardcoded platform detection to Windows for performance and simplicity
+- 🔄 Forked repository for Windows 11 optimization
+
+#### Technical Decisions
+**Windows-Only Architecture**: Decided to remove all cross-platform abstraction layers (Qt checks for MacOS menu bars, font selection logic) to streamline development for the primary target OS (Windows 11).
+
+#### Next Steps
+- Validate Windows build process
+- Continue with Inventory Intake implementation
+
+
 ### 2026-01-31 | Project Initialization
 
 **Phase:** Planning  

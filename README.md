@@ -4,20 +4,20 @@
 
 ## Overview
 
-AIOps Studio - Inventory is a cross-platform desktop application designed specifically for non-profit food pantries. It solves the unique accounting challenge of tracking mixed "Zero-Cost" (donated) and "Purchased" goods using weighted average cost accounting.
+AIOps Studio - Inventory is a Windows 11 desktop application designed specifically for non-profit food pantries. It solves the unique accounting challenge of tracking mixed "Zero-Cost" (donated) and "Purchased" goods using weighted average cost accounting.
 
 ## Key Features
 
 - **Dual-Mode Inventory Intake**: Separate workflows for purchases and donations
 - **Weighted Average Cost Accounting**: Accurate COGS calculation mixing $0 and purchased items
-- **Cross-Platform**: Native look and feel on Windows and macOS
+- **Windows 11 Native**: Native look and feel on Windows
 - **Professional Reporting**: PDF and Excel export for financial and impact reports
 - **Audit Trail**: Immutable transaction history for compliance
 
 ## Technology Stack
 
 - **Python 3.10+**
-- **PyQt6** - Cross-platform GUI framework
+- **PyQt6** - GUI framework
 - **SQLite 3** - Serverless database
 - **ReportLab** - PDF generation
 - **Pandas** - Excel export and data analysis
@@ -81,14 +81,8 @@ pytest tests/ --cov=src --cov-report=html
 
 ### Building Executables
 
-**Windows:**
 ```bash
 pyinstaller build_windows.spec
-```
-
-**macOS:**
-```bash
-pyinstaller build_macos.spec
 ```
 
 ## Documentation

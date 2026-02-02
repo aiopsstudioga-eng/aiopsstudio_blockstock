@@ -1,7 +1,7 @@
 """
 Main window for AIOps Studio - Inventory.
 
-Cross-platform main application window with navigation.
+Windows main application window with navigation.
 """
 
 from PyQt6.QtWidgets import (
@@ -70,7 +70,7 @@ class MainWindow(QMainWindow):
         """Create menu bar with platform-specific behavior."""
         menubar = self.menuBar()
         
-        # Set native menu bar for macOS
+        # Set native menu bar (Always False for Windows)
         if should_use_native_menubar():
             menubar.setNativeMenuBar(True)
         else:

@@ -9,7 +9,7 @@
 
 ## 🎯 Project Vision
 
-Build a professional-grade, cross-platform desktop application that solves the unique inventory accounting challenge faced by non-profit food pantries: accurately tracking mixed "Zero-Cost" (donated) and "Purchased" goods while maintaining financial accuracy for COGS reporting.
+Build a professional-grade Windows 11 application that solves the unique inventory accounting challenge faced by non-profit food pantries: accurately tracking mixed "Zero-Cost" (donated) and "Purchased" goods while maintaining financial accuracy for COGS reporting.
 
 ---
 
@@ -21,7 +21,7 @@ Build a professional-grade, cross-platform desktop application that solves the u
 | **Report Generation Speed** | < 5 seconds | End-of-month financial reports |
 | **Volunteer Onboarding** | < 15 minutes | Time to first successful transaction |
 | **Data Integrity** | Zero corruption incidents | SQLite database reliability |
-| **Cross-Platform** | Windows 10+ & macOS 11+ | Native look and feel on both platforms |
+| **Platform** | Windows 11+ | Native look and feel |
 
 ---
 
@@ -55,7 +55,7 @@ graph LR
 - [ ] Virtual environment configuration
 - [ ] Dependency installation (PyQt6, SQLite3, ReportLab, Pandas)
 - [ ] Database schema implementation
-- [ ] Cross-platform detection system
+- [ ] Windows environment configuration
 - [ ] Git repository initialization
 
 ##### 2. Item Master Management (Week 2-3)
@@ -116,17 +116,11 @@ graph LR
   - Zero-stock alerts
   - Category-based filtering
 
-##### 6. Cross-Platform UI Polish (Week 8-9)
+##### 6. Windows UI Polish (Week 8-9)
 - [ ] **Windows Implementation**
   - Segoe UI typography
   - Standard window controls (top-right)
   - Vertical sidebar navigation
-  
-- [ ] **macOS Implementation**
-  - San Francisco (SF Pro) typography
-  - Traffic light controls (top-left)
-  - Global menu bar integration
-  - Cmd-based keyboard shortcuts
 
 - [ ] **Accessibility (WCAG AA)**
   - Text contrast compliance
@@ -137,10 +131,9 @@ graph LR
 ##### 7. Testing & Packaging (Week 9-10)
 - [ ] Unit tests (80%+ coverage)
 - [ ] Integration tests
-- [ ] Cross-platform testing
+- [ ] Windows testing
 - [ ] PyInstaller configuration
   - Windows .exe bundle
-  - macOS .app bundle
 - [ ] User documentation
 - [ ] Sample database with demo data
 
@@ -260,7 +253,7 @@ graph TB
 
 | Component | Technology | Purpose |
 |-----------|-----------|---------|
-| **GUI Framework** | PyQt6 | Cross-platform native UI |
+| **GUI Framework** | PyQt6 | Windows native UI |
 | **Database** | SQLite 3 | Serverless, single-file storage |
 | **PDF Generation** | ReportLab | Financial reports |
 | **Excel Export** | Pandas | Data analysis and export |
@@ -323,7 +316,7 @@ graph TB
 | Risk | Impact | Mitigation |
 |------|--------|------------|
 | **Floating-point precision errors** | High | Use integer cents for all currency |
-| **Cross-platform UI inconsistencies** | Medium | Platform-specific testing, conditional styling |
+| **Windows UI inconsistencies** | Low | Standard Windows controls, Segoe UI |
 | **Database corruption** | High | Automated backups, transaction rollback |
 | **PyInstaller compatibility issues** | Medium | Early packaging tests, dependency pinning |
 | **Performance with large datasets** | Low | Database indexing, pagination, lazy loading |
@@ -366,7 +359,6 @@ graph TB
 - [PyInstaller Manual](https://pyinstaller.org/en/stable/)
 
 ### Design Resources
-- [macOS Human Interface Guidelines](https://developer.apple.com/design/human-interface-guidelines/macos)
 - [Windows Design Principles](https://learn.microsoft.com/en-us/windows/apps/design/)
 - [WCAG 2.1 Guidelines](https://www.w3.org/WAI/WCAG21/quickref/)
 
