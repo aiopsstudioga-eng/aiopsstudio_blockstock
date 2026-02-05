@@ -21,7 +21,7 @@ class InventoryItem:
     sku: str
     name: str
     category_id: Optional[int] = None
-    uom: str = "Unit"  # Unit of Measure
+    # uom removed
     quantity_on_hand: float = 0.0
     reorder_threshold: int = 10
     total_cost_basis_cents: int = 0  # Total actual money invested
@@ -137,7 +137,7 @@ class InventoryItem:
             sku=row['sku'],
             name=row['name'],
             category_id=row['category_id'],
-            uom=row['uom'],
+            # uom removed
             quantity_on_hand=row['quantity_on_hand'],
             reorder_threshold=row['reorder_threshold'],
             total_cost_basis_cents=row['total_cost_basis_cents'],
@@ -153,7 +153,7 @@ class InventoryItem:
             'sku': self.sku,
             'name': self.name,
             'category_id': self.category_id,
-            'uom': self.uom,
+            # 'uom': self.uom, # removed
             'quantity_on_hand': self.quantity_on_hand,
             'reorder_threshold': self.reorder_threshold,
             'total_cost_basis_cents': self.total_cost_basis_cents,
@@ -168,4 +168,4 @@ class InventoryItem:
     
     def __str__(self) -> str:
         """String representation of item."""
-        return f"{self.name} ({self.sku}) - {self.quantity_on_hand} {self.uom}"
+        return f"{self.name} ({self.sku}) - {self.quantity_on_hand}"

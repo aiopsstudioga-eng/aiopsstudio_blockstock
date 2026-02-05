@@ -101,9 +101,9 @@ class ItemsPage(QWidget):
         
         # Table
         self.table = QTableWidget()
-        self.table.setColumnCount(8)
+        self.table.setColumnCount(7)
         self.table.setHorizontalHeaderLabels([
-            "SKU", "Name", "Category", "Quantity", "UOM",
+            "SKU", "Name", "Category", "Quantity", 
             "Unit Cost", "Total Value", "Status"
         ])
         
@@ -176,22 +176,19 @@ class ItemsPage(QWidget):
                 qty_item = NumericTableWidgetItem(f"{item.quantity_on_hand:,.1f}")
                 qty_item.setData(Qt.ItemDataRole.UserRole, item.quantity_on_hand) # Store raw value for sorting
                 qty_item.setTextAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
-                self.table.setItem(row, 3, qty_item)
-                
-                # UOM
-                self.table.setItem(row, 4, QTableWidgetItem(item.uom))
+                # UOM column removed
                 
                 # Unit Cost - Use NumericTableWidgetItem
                 cost_item = NumericTableWidgetItem(f"${item.current_unit_cost_dollars:.2f}")
                 cost_item.setData(Qt.ItemDataRole.UserRole, item.current_unit_cost_dollars) # Store raw value
                 cost_item.setTextAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
-                self.table.setItem(row, 5, cost_item)
+                self.table.setItem(row, 4, cost_item)
                 
                 # Total Value - Use NumericTableWidgetItem
                 value_item = NumericTableWidgetItem(f"${item.total_inventory_value_dollars:,.2f}")
                 value_item.setData(Qt.ItemDataRole.UserRole, item.total_inventory_value_dollars) # Store raw value
                 value_item.setTextAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
-                self.table.setItem(row, 6, value_item)
+                self.table.setItem(row, 5, value_item)
                 
                 # Status
                 status = "Low Stock" if item.is_below_threshold() else "OK"
@@ -200,7 +197,7 @@ class ItemsPage(QWidget):
                     status_item.setForeground(QColor("#e74c3c"))
                 else:
                     status_item.setForeground(QColor("#27ae60"))
-                self.table.setItem(row, 7, status_item)
+                self.table.setItem(row, 6, status_item)
                 
                 # Store item ID in first column's UserRole for identification
                 # Note: We need to use a different role or ensure we don't conflict with sorting data if we used column 0 for numeric sort (we don't here)

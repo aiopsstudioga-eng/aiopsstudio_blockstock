@@ -29,15 +29,15 @@ def create_sample_data():
     print("Creating sample items...")
     
     items_to_create = [
-        ("BEAN001", "Canned Black Beans", 1, "Can", 20),
-        ("RICE001", "White Rice", 1, "Pound", 50),
-        ("PASTA001", "Spaghetti", 1, "Box", 30),
-        ("SOUP001", "Tomato Soup", 1, "Can", 25),
-        ("CEREAL001", "Corn Flakes", 1, "Box", 15),
+        ("BEAN001", "Canned Black Beans", 1, 20),
+        ("RICE001", "White Rice", 1, 50),
+        ("PASTA001", "Spaghetti", 1, 30),
+        ("SOUP001", "Tomato Soup", 1, 25),
+        ("CEREAL001", "Corn Flakes", 1, 15),
     ]
     
     created_items = []
-    for sku, name, cat_id, uom, threshold in items_to_create:
+    for sku, name, cat_id, threshold in items_to_create:
         try:
             # Check if item exists
             existing = service.get_item_by_sku(sku)
@@ -45,7 +45,7 @@ def create_sample_data():
                 print(f"  ✓ {name} already exists")
                 created_items.append(existing)
             else:
-                item = service.create_item(sku, name, cat_id, uom, threshold)
+                item = service.create_item(sku, name, cat_id, reorder_threshold=threshold)
                 print(f"  ✓ Created {name}")
                 created_items.append(item)
         except Exception as e:

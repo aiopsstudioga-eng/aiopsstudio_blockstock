@@ -38,7 +38,7 @@ class InventoryService:
         sku: str,
         name: str,
         category_id: Optional[int] = None,
-        uom: str = "Unit",
+        # uom param removed
         reorder_threshold: int = 10
     ) -> InventoryItem:
         """
@@ -68,9 +68,9 @@ class InventoryService:
             # Insert item
             cursor.execute("""
                 INSERT INTO inventory_items 
-                (sku, name, category_id, uom, reorder_threshold)
-                VALUES (?, ?, ?, ?, ?)
-            """, (sku, name, category_id, uom, reorder_threshold))
+                (sku, name, category_id, reorder_threshold)
+                VALUES (?, ?, ?, ?)
+            """, (sku, name, category_id, reorder_threshold))
             
             item_id = cursor.lastrowid
             
@@ -145,7 +145,7 @@ class InventoryService:
         item_id: int,
         name: Optional[str] = None,
         category_id: Optional[int] = None,
-        uom: Optional[str] = None,
+        # uom param removed
         reorder_threshold: Optional[int] = None
     ) -> InventoryItem:
         """
@@ -173,9 +173,7 @@ class InventoryService:
             if category_id is not None:
                 updates.append("category_id = ?")
                 params.append(category_id)
-            if uom is not None:
-                updates.append("uom = ?")
-                params.append(uom)
+            # uom update removed
             if reorder_threshold is not None:
                 updates.append("reorder_threshold = ?")
                 params.append(reorder_threshold)

@@ -31,7 +31,7 @@ CREATE TABLE IF NOT EXISTS inventory_items (
     sku TEXT UNIQUE NOT NULL,
     name TEXT NOT NULL,
     category_id INTEGER,
-    uom TEXT DEFAULT 'Unit',  -- Unit of Measure (Unit, Box, Case, Pound, etc.)
+    -- uom column removed
     quantity_on_hand REAL DEFAULT 0,
     reorder_threshold INTEGER DEFAULT 10,
     total_cost_basis_cents INTEGER DEFAULT 0,  -- Total actual money invested (in cents)

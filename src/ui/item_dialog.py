@@ -65,13 +65,7 @@ class ItemDialog(QDialog):
         self.load_categories()
         form.addRow("Category:", self.category_combo)
         
-        # Unit of Measure
-        self.uom_combo = QComboBox()
-        self.uom_combo.addItems([
-            "Unit", "Box", "Case", "Can", "Jar", "Bottle",
-            "Pound", "Kilogram", "Liter", "Gallon", "Package"
-        ])
-        form.addRow("Unit of Measure:", self.uom_combo)
+        # Unit of Measure removed
         
         # Reorder Threshold
         self.threshold_spin = QSpinBox()
@@ -135,15 +129,10 @@ class ItemDialog(QDialog):
         self.name_input.setText(self.item.name)
         
         # Set category
-        if self.item.category_id:
-            index = self.category_combo.findData(self.item.category_id)
             if index >= 0:
                 self.category_combo.setCurrentIndex(index)
         
-        # Set UOM
-        index = self.uom_combo.findText(self.item.uom)
-        if index >= 0:
-            self.uom_combo.setCurrentIndex(index)
+        # UOM load removed
         
         self.threshold_spin.setValue(self.item.reorder_threshold)
     
@@ -163,8 +152,9 @@ class ItemDialog(QDialog):
             self.name_input.setFocus()
             return
         
+        
         category_id = self.category_combo.currentData()
-        uom = self.uom_combo.currentText()
+        # uom = self.uom_combo.currentText() # removed
         threshold = self.threshold_spin.value()
         
         try:
@@ -174,7 +164,7 @@ class ItemDialog(QDialog):
                     item_id=self.item.id,
                     name=name,
                     category_id=category_id,
-                    uom=uom,
+                    # uom=uom,
                     reorder_threshold=threshold
                 )
                 QMessageBox.information(
@@ -188,7 +178,7 @@ class ItemDialog(QDialog):
                     sku=sku,
                     name=name,
                     category_id=category_id,
-                    uom=uom,
+                    # uom=uom,
                     reorder_threshold=threshold
                 )
                 QMessageBox.information(
