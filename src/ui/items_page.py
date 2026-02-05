@@ -5,13 +5,32 @@ Items management page for viewing and managing inventory items.
 from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QPushButton,
     QTableWidget, QTableWidgetItem, QHeaderView,
-    QLabel, QLineEdit, QMessageBox
+    QLabel, QLineEdit, QMessageBox, QComboBox
 )
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QColor
 
 from services.inventory_service import InventoryService
 from ui.item_dialog import ItemDialog
+
+
+class NumericTableWidgetItem(QTableWidgetItem):
+    """
+    Table widget item that sorts numerically.
+    """
+    def __lt__(self, other):
+        try:
+            # Get the data stored in UserRole (the raw numeric value)
+            # If not set, try to parse the text (stripping currency/commas)
+            my_value = self.data(Qt.ItemDataRole.UserRole)
+            other_value = other.data(Qt.ItemDataRole.UserRole)
+            
+            if my_value is None:
+                return super().__lt__(other)
+                
+            return float(my_value) < float(other_value)
+        except (ValueError, TypeError):
+            return super().__lt__(other)
 
 
 class ItemsPage(QWidget):
@@ -45,6 +64,15 @@ class ItemsPage(QWidget):
         
         header_layout.addStretch()
         
+        # Category Filter
+        self.category_filter = QComboBox()
+        self.category_filter.setPlaceholderText("Filter by Category")
+        self.category_filter.setFixedWidth(200)
+        self.category_filter.addItem("All Categories", None)
+        # Categories will be populated in load_items or a separate method
+        self.category_filter.currentIndexChanged.connect(self.filter_items)
+        header_layout.addWidget(self.category_filter)
+
         # Search box
         self.search_input = QLineEdit()
         self.search_input.setPlaceholderText("Search items...")
@@ -83,6 +111,7 @@ class ItemsPage(QWidget):
         self.table.setAlternatingRowColors(True)
         self.table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
         self.table.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
+        self.table.setSortingEnabled(True)  # Enable Native Sorting
         
         # Resize columns
         header = self.table.horizontalHeader()
@@ -112,8 +141,17 @@ class ItemsPage(QWidget):
     def load_items(self):
         """Load items into table."""
         try:
-            items = self.service.get_all_items()
+            # Turn off sorting while loading to improve performance
+            self.table.setSortingEnabled(False)
             
+            items = self.service.get_all_items()
+            categories = self.service.get_all_categories()
+            
+            # Populate category filter if empty (except "All Categories")
+            if self.category_filter.count() <= 1:
+                for cat in categories:
+                    self.category_filter.addItem(cat.name, cat.id)
+
             self.table.setRowCount(len(items))
             
             for row, item in enumerate(items):
@@ -125,29 +163,33 @@ class ItemsPage(QWidget):
                 
                 # Category
                 category_name = ""
-                if item.category_id:
-                    categories = self.service.get_all_categories()
+                item_cat_id = item.category_id
+                
+                if item_cat_id:
                     for cat in categories:
-                        if cat.id == item.category_id:
+                        if cat.id == item_cat_id:
                             category_name = cat.name
                             break
                 self.table.setItem(row, 2, QTableWidgetItem(category_name))
                 
-                # Quantity
-                qty_item = QTableWidgetItem(f"{item.quantity_on_hand:,.1f}")
+                # Quantity - Use NumericTableWidgetItem
+                qty_item = NumericTableWidgetItem(f"{item.quantity_on_hand:,.1f}")
+                qty_item.setData(Qt.ItemDataRole.UserRole, item.quantity_on_hand) # Store raw value for sorting
                 qty_item.setTextAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
                 self.table.setItem(row, 3, qty_item)
                 
                 # UOM
                 self.table.setItem(row, 4, QTableWidgetItem(item.uom))
                 
-                # Unit Cost
-                cost_item = QTableWidgetItem(f"${item.current_unit_cost_dollars:.2f}")
+                # Unit Cost - Use NumericTableWidgetItem
+                cost_item = NumericTableWidgetItem(f"${item.current_unit_cost_dollars:.2f}")
+                cost_item.setData(Qt.ItemDataRole.UserRole, item.current_unit_cost_dollars) # Store raw value
                 cost_item.setTextAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
                 self.table.setItem(row, 5, cost_item)
                 
-                # Total Value
-                value_item = QTableWidgetItem(f"${item.total_inventory_value_dollars:,.2f}")
+                # Total Value - Use NumericTableWidgetItem
+                value_item = NumericTableWidgetItem(f"${item.total_inventory_value_dollars:,.2f}")
+                value_item.setData(Qt.ItemDataRole.UserRole, item.total_inventory_value_dollars) # Store raw value
                 value_item.setTextAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
                 self.table.setItem(row, 6, value_item)
                 
@@ -160,24 +202,50 @@ class ItemsPage(QWidget):
                     status_item.setForeground(QColor("#27ae60"))
                 self.table.setItem(row, 7, status_item)
                 
-                # Store item ID in row data
+                # Store item ID in first column's UserRole for identification
+                # Note: We need to use a different role or ensure we don't conflict with sorting data if we used column 0 for numeric sort (we don't here)
+                # But actually, SKU is column 0 and strings sort fine.
+                # However, let's store the ID in a custom role just to be safe or use UserRole + 1
+                # Standard UserRole is 32 (0x0100).
+                # To avoid conflict with NumericTableWidgetItem which uses UserRole for valid numeric columns (3, 5, 6),
+                # we are safe to use UserRole on column 0 (SKU) as it is not a NumericTableWidgetItem.
                 self.table.item(row, 0).setData(Qt.ItemDataRole.UserRole, item.id)
+                
+                # Also store category ID in the category column for easy filtering
+                self.table.item(row, 2).setData(Qt.ItemDataRole.UserRole, item.category_id)
+
+            self.table.setSortingEnabled(True)
             
         except Exception as e:
             QMessageBox.critical(self, "Error", f"Failed to load items: {e}")
     
-    def filter_items(self, text: str):
-        """Filter table rows based on search text."""
+    def filter_items(self):
+        """Filter table rows based on search text and category selection."""
+        search_text = self.search_input.text().lower()
+        category_data = self.category_filter.currentData() # This returns the category ID or None
+
         for row in range(self.table.rowCount()):
-            show_row = False
+            show_row = True
             
-            # Search in SKU and Name columns
-            for col in [0, 1]:
-                item = self.table.item(row, col)
-                if item and text.lower() in item.text().lower():
-                    show_row = True
-                    break
+            # 1. Filter by Text (SKU or Name)
+            if search_text:
+                sku_item = self.table.item(row, 0)
+                name_item = self.table.item(row, 1)
+                text_match = (sku_item and search_text in sku_item.text().lower()) or \
+                             (name_item and search_text in name_item.text().lower())
+                if not text_match:
+                    show_row = False
             
+            # 2. Filter by Category (if not "All Categories")
+            if show_row and category_data is not None:
+                # We stored category_id in column 2 UserRole
+                cat_item = self.table.item(row, 2)
+                row_cat_id = cat_item.data(Qt.ItemDataRole.UserRole)
+                
+                # Handle case where item has no category (row_cat_id is None or 0)
+                if row_cat_id != category_data:
+                    show_row = False
+
             self.table.setRowHidden(row, not show_row)
     
     def create_item(self):
@@ -193,6 +261,7 @@ class ItemsPage(QWidget):
             QMessageBox.warning(self, "No Selection", "Please select an item to edit")
             return
         
+        # Start looking for ID from column 0
         item_id = self.table.item(current_row, 0).data(Qt.ItemDataRole.UserRole)
         item = self.service.get_item(item_id)
         
