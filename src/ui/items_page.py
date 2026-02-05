@@ -47,6 +47,7 @@ class ItemsPage(QWidget):
         super().__init__(parent)
         
         self.service = service
+        self.active_filters = {}  # Store active filters: {column_index: filter_value}
         self.init_ui()
         self.load_items()
     
@@ -121,7 +122,15 @@ class ItemsPage(QWidget):
         # Double-click to edit
         self.table.doubleClicked.connect(self.edit_selected_item)
         
+        # Single click to filter
+        self.table.cellClicked.connect(self.on_cell_clicked)
+        
         layout.addWidget(self.table)
+        
+        # Filter status label
+        self.filter_label = QLabel("")
+        self.filter_label.setStyleSheet("color: #3498db; font-style: italic; padding: 5px;")
+        layout.addWidget(self.filter_label)
         
         # Action buttons
         action_layout = QHBoxLayout()
@@ -176,6 +185,8 @@ class ItemsPage(QWidget):
                 qty_item = NumericTableWidgetItem(f"{item.quantity_on_hand:,.1f}")
                 qty_item.setData(Qt.ItemDataRole.UserRole, item.quantity_on_hand) # Store raw value for sorting
                 qty_item.setTextAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
+                self.table.setItem(row, 3, qty_item)
+                
                 # UOM column removed
                 
                 # Unit Cost - Use NumericTableWidgetItem
@@ -217,7 +228,7 @@ class ItemsPage(QWidget):
             QMessageBox.critical(self, "Error", f"Failed to load items: {e}")
     
     def filter_items(self):
-        """Filter table rows based on search text and category selection."""
+        """Filter table rows based on search text, category selection, and active click filters."""
         search_text = self.search_input.text().lower()
         category_data = self.category_filter.currentData() # This returns the category ID or None
 
@@ -233,7 +244,7 @@ class ItemsPage(QWidget):
                 if not text_match:
                     show_row = False
             
-            # 2. Filter by Category (if not "All Categories")
+            # 2. Filter by Category dropdown (if not "All Categories")
             if show_row and category_data is not None:
                 # We stored category_id in column 2 UserRole
                 cat_item = self.table.item(row, 2)
@@ -242,8 +253,56 @@ class ItemsPage(QWidget):
                 # Handle case where item has no category (row_cat_id is None or 0)
                 if row_cat_id != category_data:
                     show_row = False
+            
+            # 3. Filter by active click filters
+            if show_row and self.active_filters:
+                for col_index, filter_value in self.active_filters.items():
+                    cell_item = self.table.item(row, col_index)
+                    if cell_item and cell_item.text() != filter_value:
+                        show_row = False
+                        break
 
             self.table.setRowHidden(row, not show_row)
+    
+    def on_cell_clicked(self, row: int, column: int):
+        """Handle cell click to filter by that column's value."""
+        # Skip if clicking on a hidden row
+        if self.table.isRowHidden(row):
+            return
+        
+        cell_item = self.table.item(row, column)
+        if not cell_item:
+            return
+        
+        filter_value = cell_item.text()
+        
+        # If this column is already filtered with this value, clear the filter
+        if column in self.active_filters and self.active_filters[column] == filter_value:
+            del self.active_filters[column]
+        else:
+            # Set filter for this column
+            self.active_filters[column] = filter_value
+        
+        # Update filter label
+        self.update_filter_label()
+        
+        # Apply filters
+        self.filter_items()
+    
+    def update_filter_label(self):
+        """Update the filter status label."""
+        if not self.active_filters:
+            self.filter_label.setText("")
+            return
+        
+        column_names = ["SKU", "Name", "Category", "Quantity", "Unit Cost", "Total Value", "Status"]
+        filter_texts = []
+        
+        for col_index, filter_value in self.active_filters.items():
+            col_name = column_names[col_index] if col_index < len(column_names) else f"Column {col_index}"
+            filter_texts.append(f"{col_name}: '{filter_value}'")
+        
+        self.filter_label.setText(f"🔍 Active Filters: {', '.join(filter_texts)} (Click cell again to clear)")
     
     def create_item(self):
         """Create new item."""

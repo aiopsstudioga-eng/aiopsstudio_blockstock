@@ -129,6 +129,8 @@ class ItemDialog(QDialog):
         self.name_input.setText(self.item.name)
         
         # Set category
+        if self.item.category_id:
+            index = self.category_combo.findData(self.item.category_id)
             if index >= 0:
                 self.category_combo.setCurrentIndex(index)
         
