@@ -307,7 +307,7 @@ class MainWindow(QMainWindow):
     def create_intake_card(self, title: str, description: str, color: str, callback) -> QPushButton:
         """Create an intake action card button."""
         btn = QPushButton()
-        btn.setFixedSize(350, 200)  # Increased width to fit "Record Distribution"
+        btn.setFixedSize(380, 200)  # Increased width to fit "Record Distribution" fully
         btn.setCursor(Qt.CursorShape.PointingHandCursor)
         btn.clicked.connect(callback)
         
