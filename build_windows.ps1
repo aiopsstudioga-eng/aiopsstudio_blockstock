@@ -1,11 +1,11 @@
 <#
 .SYNOPSIS
-    Builds the BlockTracker application for Windows 11.
+    Builds the AI OPS Studio application for Windows 11.
 
 .DESCRIPTION
-    This script automates the build process for BlockTracker, including:
+    This script automates the build process for AI OPS Studio, including:
     1. Virtual Environment activation
-    2. PyInstaller build using packaging/windows/BlockTracker.spec
+    2. PyInstaller build using packaging/windows/AIOpsStudio.spec
     3. Code Signing (if certificate exists)
     4. Build verification
 
@@ -27,7 +27,7 @@ if (-not $currentPrincipal.IsInRole([Security.Principal.WindowsBuiltInRole]::Adm
 
 # 1. Setup Environment
 Write-Host "========================================================" -ForegroundColor Cyan
-Write-Host "      Building BlockTracker (Windows 11)" -ForegroundColor Cyan
+Write-Host "      Building AI OPS Studio (Windows 11)" -ForegroundColor Cyan
 Write-Host "========================================================" -ForegroundColor Cyan
 
 $ProjectRoot = $PSScriptRoot
@@ -35,7 +35,7 @@ Set-Location -Path $ProjectRoot
 Write-Host "[INFO] Project Root: $ProjectRoot" -ForegroundColor Gray
 
 # Define paths
-$SpecFile = Join-Path $ProjectRoot "packaging\windows\BlockTracker.spec"
+$SpecFile = Join-Path $ProjectRoot "packaging\windows\AIOpsStudio.spec"
 $VenvActivate = Join-Path $ProjectRoot "venv\Scripts\Activate.ps1"
 $DistDir = Join-Path $ProjectRoot "dist"
 $BuildDir = Join-Path $ProjectRoot "build"
@@ -73,7 +73,7 @@ try {
 }
 
 # 6. Verify Build
-$ExePath = Join-Path $DistDir "BlockTracker\BlockTracker.exe"
+$ExePath = Join-Path $DistDir "AIOpsStudio\AIOpsStudio.exe"
 if (Test-Path $ExePath) {
     Write-Host "[SUCCESS] Build created successfully at:" -ForegroundColor Green
     Write-Host "    $ExePath" -ForegroundColor White

@@ -29,6 +29,41 @@ Each entry follows this structure:
 
 ## Development Entries
 
+### 2026-02-07 | Database Path Fix & Rebranding
+
+**Phase:** Development / Bug Fix  
+**Focus:** Critical database initialization bug and application rebranding
+
+#### Accomplishments
+- 🐛 **Fixed critical database path bug**: `.exe` was creating `inventory.db` in local directory instead of `C:\Users\<user>\AppData\Local\AIOpsStudio\`
+- 🔧 Updated `main.py` to initialize global `get_db_manager(db_path)` singleton **before** creating `MainWindow`
+- 🏷️ Completed rebranding from "BlockTracker" to "AI OPS Studio"
+- 🏷️ Renamed "Inventory" references to "BlockStock" where applicable
+
+#### Bug Details
+**Root Cause**: `main.py` computed the correct AppData database path but never passed it to services. When `InventoryService` called `get_db_manager()` without arguments, it defaulted to relative `"inventory.db"` — creating the file in the current working directory.
+
+**Fix Applied**:
+```python
+# In main.py - BEFORE creating MainWindow
+from database.connection import init_database, get_db_manager
+
+# After computing db_path...
+get_db_manager(db_path)  # Initialize singleton with correct path
+```
+
+This ensures all services that call `get_db_manager()` receive the already-initialized singleton pointing to AppData.
+
+#### Technical Decisions
+**Singleton Pattern for DatabaseManager**: The global `_db_manager` singleton pattern requires initialization order discipline. All database path setup must occur before any UI components are instantiated.
+
+#### Next Steps
+- Rebuild Windows `.exe` with the fix
+- Test database loading with existing data in AppData
+- Continue with Phase 1 MVP features
+
+---
+
 ### 2026-02-01 | Platform Refocus
 
 **Phase:** Refactoring  

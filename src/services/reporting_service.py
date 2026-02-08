@@ -251,7 +251,6 @@ class ReportingService:
                 name,
                 quantity_on_hand,
                 reorder_threshold,
-                uom,
                 total_cost_basis_cents,
                 category_id
             FROM inventory_items
@@ -280,7 +279,6 @@ class ReportingService:
                 'name': row['name'],
                 'quantity': qty,
                 'threshold': threshold,
-                'uom': row['uom'],
                 'value_cents': cost_basis,
                 'unit_cost_cents': int(cost_basis / qty) if qty > 0 else 0
             }

@@ -141,7 +141,7 @@ class PurchaseDialog(QDialog):
             
             for item in items:
                 self.item_combo.addItem(
-                    f"{item.name} ({item.sku}) - {item.quantity_on_hand} {item.uom}",
+                    f"{item.name} ({item.sku}) - {item.quantity_on_hand:.1f} in stock",
                     item.id
                 )
                 
@@ -181,7 +181,7 @@ class PurchaseDialog(QDialog):
                 "Success",
                 f"Purchase recorded!\n\n"
                 f"Item: {item.name}\n"
-                f"New Quantity: {item.quantity_on_hand} {item.uom}\n"
+                f"New Quantity: {item.quantity_on_hand:.1f}\n"
                 f"New Unit Cost: ${item.current_unit_cost_dollars:.2f}"
             )
             
@@ -327,7 +327,7 @@ class DonationDialog(QDialog):
             
             for item in items:
                 self.item_combo.addItem(
-                    f"{item.name} ({item.sku}) - {item.quantity_on_hand} {item.uom}",
+                    f"{item.name} ({item.sku}) - {item.quantity_on_hand:.1f} in stock",
                     item.id
                 )
                 
@@ -367,7 +367,7 @@ class DonationDialog(QDialog):
                 "Success",
                 f"Donation recorded!\n\n"
                 f"Item: {item.name}\n"
-                f"New Quantity: {item.quantity_on_hand} {item.uom}\n"
+                f"New Quantity: {item.quantity_on_hand:.1f}\n"
                 f"New Unit Cost: ${item.current_unit_cost_dollars:.2f}\n"
                 f"Impact Value: ${transaction.fair_market_value_dollars:.2f}"
             )

@@ -163,7 +163,7 @@ class DistributionDialog(QDialog):
             item = self.service.get_item(item_id)
             if item:
                 self.available_label.setText(
-                    f"{item.quantity_on_hand:,.1f} {item.uom} available"
+                    f"{item.quantity_on_hand:,.1f} units available"
                 )
                 self.update_cogs()
         except Exception as e:
@@ -204,7 +204,7 @@ class DistributionDialog(QDialog):
                     self,
                     "Insufficient Inventory",
                     f"Cannot distribute {quantity} units.\n"
-                    f"Only {item.quantity_on_hand} {item.uom} available."
+                    f"Only {item.quantity_on_hand:.1f} units available."
                 )
                 return
         except Exception as e:
@@ -239,7 +239,7 @@ class DistributionDialog(QDialog):
                 "Success",
                 f"Distribution recorded!\n\n"
                 f"Item: {item.name}\n"
-                f"Remaining Quantity: {item.quantity_on_hand} {item.uom}\n"
+                f"Remaining Quantity: {item.quantity_on_hand:.1f}\n"
                 f"COGS: ${transaction.total_financial_impact_dollars:.2f}"
             )
             

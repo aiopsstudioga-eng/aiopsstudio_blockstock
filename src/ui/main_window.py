@@ -1,5 +1,5 @@
 """
-Main window for BlockTracker.
+Main window for AI OPS Studio.
 
 Windows main application window with navigation.
 """
@@ -33,7 +33,7 @@ class MainWindow(QMainWindow):
         
     def init_ui(self):
         """Initialize user interface."""
-        self.setWindowTitle("BlockTracker")
+        self.setWindowTitle("AI OPS Studio")
         self.setMinimumSize(1000, 700)
         
         # Set platform-appropriate font
@@ -93,8 +93,8 @@ class MainWindow(QMainWindow):
         exit_action.triggered.connect(self.close)
         file_menu.addAction(exit_action)
         
-        # Inventory menu
-        inventory_menu = menubar.addMenu("&Inventory")
+        # BlockStock menu
+        inventory_menu = menubar.addMenu("&BlockStock")
         
         new_item_action = QAction("&New Item", self)
         new_item_action.setShortcut(f"{modifier}+N")
@@ -173,12 +173,12 @@ class MainWindow(QMainWindow):
         layout.setSpacing(0)
         
         # App title
-        title = QLabel("BlockTracker")
-        title.setStyleSheet("font-size: 16pt; font-weight: bold; padding: 20px;")
+        title = QLabel("AI OPS Studio")
+        title.setStyleSheet("font-size: 14pt; font-weight: bold; padding: 20px;")
         title.setAlignment(Qt.AlignmentFlag.AlignCenter)
         layout.addWidget(title)
         
-        subtitle = QLabel("Inventory")
+        subtitle = QLabel("BlockStock")
         subtitle.setStyleSheet("font-size: 10pt; padding: 0px 20px 20px 20px;")
         subtitle.setAlignment(Qt.AlignmentFlag.AlignCenter)
         layout.addWidget(subtitle)
@@ -512,8 +512,8 @@ class MainWindow(QMainWindow):
         """Show about dialog."""
         QMessageBox.about(
             self,
-            "About BlockTracker",
-            "<h2>BlockTracker</h2>"
+            "About AI OPS Studio",
+            "<h2>AI OPS Studio</h2>"
             "<p>Version 0.1.0-alpha</p>"
             "<p>Professional inventory management for food pantries</p>"
             "<p>© 2026 AI Ops Studio LLC </p>"

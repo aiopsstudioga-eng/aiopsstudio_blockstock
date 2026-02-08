@@ -215,7 +215,7 @@ class PDFReportGenerator:
                 alert_data.append([
                     item['sku'],
                     item['name'],
-                    f"{item['quantity']:.1f} {item['uom']}",
+                    f"{item['quantity']:.1f}",
                     f"{item['threshold']}",
                     'OUT OF STOCK'
                 ])
@@ -225,7 +225,7 @@ class PDFReportGenerator:
                 alert_data.append([
                     item['sku'],
                     item['name'],
-                    f"{item['quantity']:.1f} {item['uom']}",
+                    f"{item['quantity']:.1f}",
                     f"{item['threshold']}",
                     'LOW'
                 ])

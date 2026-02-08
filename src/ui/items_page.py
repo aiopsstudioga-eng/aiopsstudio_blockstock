@@ -59,7 +59,7 @@ class ItemsPage(QWidget):
         # Header
         header_layout = QHBoxLayout()
         
-        title = QLabel("Inventory Items")
+        title = QLabel("BlockStock Items")
         title.setStyleSheet("font-size: 24pt; font-weight: bold;")
         header_layout.addWidget(title)
         
