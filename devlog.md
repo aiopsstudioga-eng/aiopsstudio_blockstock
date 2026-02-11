@@ -115,6 +115,30 @@ This ensures all services that call `get_db_manager()` receive the already-initi
 
 ---
 
+### 2026-02-11 | Dashboard Fixes & Maintenance
+
+**Phase:** Phase 2 Polish / Maintenance
+**Focus:** Dashboard Visualization Fixes, Build Validation, Project Cleanup
+
+#### Accomplishments
+- 📊 **Fixed Dashboard Charts**:
+    - **Pie Chart**: Solved label overlapping issue by moving categories to a legend and hiding labels for small slices (< 5%).
+    - **Bar Chart**: Fixed "blank" appearance and missing labels by implementing dynamic Y-axis scaling (1.2x max value).
+- 📦 **Rebuilt Windows Executable**:
+    - Validated build process with `build_windows.ps1`.
+    - Generated new artifact in `dist/AIOpsStudio/AIOpsStudio.exe`.
+- 🧹 **Project Cleanup**:
+    - Audited project files and removed obsolete logs, temporary databases (`test_dashboard_*.db`), and legacy installer scripts (`BlockTracker.iss`).
+    - Standardized on `AIOpsStudio.iss`.
+
+#### Technical Decisions
+- **Legend vs Labels**: For the pie chart, we switched from direct labeling (which caused collisions on small slices) to a side legend. This ensures readability regardless of data distribution.
+
+#### Next Steps
+- Begin Phase 3: "Connected" features.
+
+---
+
 ### 2026-02-01 | Platform Refocus
 
 **Phase:** Refactoring  
