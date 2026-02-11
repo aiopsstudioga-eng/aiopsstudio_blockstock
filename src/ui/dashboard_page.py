@@ -119,17 +119,19 @@ class DashboardPage(QWidget):
                 # Small explode for visual separation
                 explode = [0.05] * len(values)
                 
+                # Define a function to hide small percentages
+                def autopct_format(pct):
+                    return ('%1.1f%%' % pct) if pct >= 5 else ''
+
                 wedges, texts, autotexts = ax1.pie(
                     values, 
-                    labels=labels,
-                    autopct='%1.1f%%',
+                    labels=None, # Hide external labels to prevent smashing
+                    autopct=autopct_format,
                     startangle=90, 
                     colors=colors,
                     explode=explode,
-                    pctdistance=0.85,  # Percentage inside
-                    labeldistance=1.1,  # Labels outside
-                    textprops={'fontsize': 9},
-                    autopct_kw={'fontsize': 9, 'weight': 'bold'}
+                    pctdistance=0.85,
+                    textprops={'fontsize': 9}
                 )
                 
                 # Style the percentage labels
@@ -137,7 +139,18 @@ class DashboardPage(QWidget):
                     autotext.set_color('white')
                     autotext.set_weight('bold')
                 
-                ax1.set_title("Inventory Value by Category", fontsize=11, weight='bold', pad=20)
+                # Add Legend
+                ax1.legend(
+                    wedges, labels,
+                    title="Categories",
+                    loc="center left",
+                    bbox_to_anchor=(0.9, 0, 0.5, 1),
+                    fontsize='small'
+                )
+                
+                ax1.set_title("Inventory Value by Category", fontsize=10, weight='bold')
+                # Adjust margins to accommodate legend on the right
+                self.category_figure.subplots_adjust(left=0.05, right=0.7, top=0.9, bottom=0.1)
             else:
                 ax1.text(0.5, 0.5, "No Data", ha='center', va='center')
                 
@@ -156,13 +169,18 @@ class DashboardPage(QWidget):
                 bars = ax2.bar(names, quantities, color='#3498db')
                 
                 # Add counts on top of bars
-                ax2.bar_label(bars)
+                ax2.bar_label(bars, padding=3)
                 
-                ax2.set_title("Top 5 Distributed Items (All Time)")
-                ax2.set_ylabel("Units Distributed")
+                ax2.set_title("Top 5 Distributed Items", pad=20)
+                ax2.set_ylabel("Units")
+                
+                # Dynamic Y-limit to fit labels
+                if quantities:
+                    ax2.set_ylim(0, max(quantities) * 1.2)
+                
                 # Rotate labels if they are long
                 plt.setp(ax2.get_xticklabels(), rotation=45, ha='right')
-                self.distributed_figure.subplots_adjust(bottom=0.2) # Make room for labels
+                self.distributed_figure.subplots_adjust(bottom=0.25, top=0.85)
             else:
                 ax2.text(0.5, 0.5, "No Data", ha='center', va='center')
                 

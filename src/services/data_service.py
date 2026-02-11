@@ -29,6 +29,8 @@ class DataService:
         """
         try:
             items = self.inventory_service.get_all_items()
+            categories = self.inventory_service.get_all_categories()
+            category_map = {c.id: c.name for c in categories}
             
             with open(file_path, 'w', newline='', encoding='utf-8') as f:
                 writer = csv.writer(f)
@@ -40,12 +42,12 @@ class DataService:
                 
                 # Data
                 for item in items:
-                    cat_name = "" # TODO: Fetch category name if needed, or just ID
+                    cat_name = category_map.get(item.category_id, "") if item.category_id else ""
                     writer.writerow([
                         item.id,
                         item.sku,
                         item.name,
-                        item.category_id,
+                        cat_name,
                         item.quantity_on_hand,
                         item.current_unit_cost_dollars,
                         item.total_inventory_value_dollars,

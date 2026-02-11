@@ -88,8 +88,30 @@ This ensures all services that call `get_db_manager()` receive the already-initi
 - **DataService Separation**: Isolated CSV logic into `data_service.py` to keep `inventory_service.py` focused on core business logic.
 
 #### Next Steps
-- User review of Phase 2 features.
+- User review of Phase 2 features (Completed 2026-02-11).
 - paused Phase 3 ("Connected") development pending user feedback.
+
+---
+
+### 2026-02-11 | Phase 2 Code Review & Refactoring
+
+**Phase:** Start of Phase 3 Preparation
+**Focus:** Code Quality, Logic Consistency, and Bug Fixes
+
+#### Accomplishments
+- 🧐 **Conducted Comprehensive Code Review**: Analyzed `src/` structure, logic, and tests.
+- ♻️ **Refactored Inventory Logic**:
+    - Moved weighted average cost calculation from `InventoryService` (inline) to `InventoryItem` (model method).
+    - Eliminated logic duplication and ensured unit tests actually cover the running application's logic.
+- 🐛 **Fixed CSV Export Bug**:
+    - `DataService` now correctly fetches and maps Category IDs to Names (e.g., "Food", "Dry Goods") in exported CSVs.
+- 🧹 **Cleanup**: Removed obsolete `uom` comments.
+
+#### Technical Decisions
+- **Model-Centric Logic**: Decided to encapsulate state-change logic (`calculate_purchase_state`) in the Model to enforce data integrity and simplify Service layer testing.
+
+#### Next Steps
+- Begin Phase 3: "Connected" features.
 
 ---
 

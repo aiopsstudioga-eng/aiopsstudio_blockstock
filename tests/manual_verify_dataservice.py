@@ -58,7 +58,15 @@ TEST002,Test Item 2,5,20
     if data_service.export_items_to_csv(export_path_pop):
         print(f"Export successful: {export_path_pop}")
         with open(export_path_pop, 'r') as f:
-            print(f"Content:\n{f.read()}")
+            content = f.read()
+            print(f"Content:\n{content}")
+            
+            # Verify category name presence
+            if "Dry Goods" in content:
+                print("✅ Category Name 'Dry Goods' found in export")
+            else:
+                print("❌ Category Name 'Dry Goods' NOT found in export")
+                
         os.remove(export_path_pop)
     
     # Cleanup

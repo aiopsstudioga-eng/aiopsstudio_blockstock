@@ -38,7 +38,6 @@ class InventoryService:
         sku: str,
         name: str,
         category_id: Optional[int] = None,
-        # uom param removed
         reorder_threshold: int = 10
     ) -> InventoryItem:
         """
@@ -48,7 +47,6 @@ class InventoryService:
             sku: Unique SKU identifier
             name: Item name
             category_id: Category ID (optional)
-            uom: Unit of measure
             reorder_threshold: Reorder threshold quantity
             
         Returns:
@@ -145,7 +143,6 @@ class InventoryService:
         item_id: int,
         name: Optional[str] = None,
         category_id: Optional[int] = None,
-        # uom param removed
         reorder_threshold: Optional[int] = None
     ) -> InventoryItem:
         """
@@ -155,7 +152,6 @@ class InventoryService:
             item_id: Item ID
             name: New name (optional)
             category_id: New category ID (optional)
-            uom: New unit of measure (optional)
             reorder_threshold: New reorder threshold (optional)
             
         Returns:
@@ -173,7 +169,7 @@ class InventoryService:
             if category_id is not None:
                 updates.append("category_id = ?")
                 params.append(category_id)
-            # uom update removed
+            
             if reorder_threshold is not None:
                 updates.append("reorder_threshold = ?")
                 params.append(reorder_threshold)
@@ -288,9 +284,10 @@ class InventoryService:
             
             item = InventoryItem.from_db_row(row)
             
-            # Calculate new totals
-            new_quantity = item.quantity_on_hand + quantity
-            new_cost_basis = item.total_cost_basis_cents + total_cost_cents
+            # Calculate new totals using Model logic
+            new_quantity, new_cost_basis = item.calculate_purchase_state(
+                quantity, total_cost_cents
+            )
             
             # Update item
             cursor.execute("""
@@ -432,24 +429,14 @@ class InventoryService:
             
             item = InventoryItem.from_db_row(row)
             
-            # Validate sufficient inventory
-            if not item.can_distribute(quantity):
-                raise ValueError(
-                    f"Insufficient inventory. Available: {item.quantity_on_hand}, "
-                    f"Requested: {quantity}"
-                )
+            # Calculate new totals using Model logic
+            # This handles validation, COGS calculation, and state updates
+            new_quantity, new_cost_basis, total_financial_impact_cents = item.calculate_distribution_state(
+                quantity
+            )
             
-            # Calculate COGS at current weighted average cost
+            # Get unit cost for the record (using current state before update is fine as avg doesn't change on distribution)
             unit_cost_cents = item.current_unit_cost_cents
-            total_financial_impact_cents = int(quantity * unit_cost_cents)
-            
-            # Calculate new totals
-            new_quantity = item.quantity_on_hand - quantity
-            new_cost_basis = item.total_cost_basis_cents - total_financial_impact_cents
-            
-            # Ensure cost basis doesn't go negative due to rounding
-            if new_cost_basis < 0:
-                new_cost_basis = 0
             
             # Update item
             cursor.execute("""

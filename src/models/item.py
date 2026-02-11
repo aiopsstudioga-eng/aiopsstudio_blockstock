@@ -95,31 +95,68 @@ class InventoryItem:
         """
         return self.quantity_on_hand >= quantity
     
-    def calculate_new_weighted_average(
+    def calculate_purchase_state(
         self, 
-        incoming_qty: float, 
-        incoming_cost_cents: int
-    ) -> int:
+        quantity: float, 
+        total_cost_cents: int
+    ) -> tuple[float, int]:
         """
-        Calculate new weighted average cost after adding inventory.
-        
-        Formula: New_Avg_Cost = (Total_Cost_Basis + New_Incoming_Cost) / 
-                                (Total_Qty_On_Hand + New_Incoming_Qty)
+        Calculate new state after a purchase.
         
         Args:
-            incoming_qty: Quantity being added
-            incoming_cost_cents: Total cost of incoming inventory in cents
+            quantity: Quantity purchased
+            total_cost_cents: Total cost of purchase in cents
             
         Returns:
-            int: New weighted average unit cost in cents
+            tuple[float, int]: (new_quantity, new_total_cost_basis_cents)
         """
-        new_total_cost = self.total_cost_basis_cents + incoming_cost_cents
-        new_total_qty = self.quantity_on_hand + incoming_qty
+        if quantity <= 0:
+            raise ValueError("Purchase quantity must be positive")
+        if total_cost_cents < 0:
+            raise ValueError("Purchase cost cannot be negative")
+            
+        new_quantity = self.quantity_on_hand + quantity
+        new_cost_basis = self.total_cost_basis_cents + total_cost_cents
         
-        if new_total_qty <= 0:
-            return 0
+        return new_quantity, new_cost_basis
+
+    def calculate_distribution_state(
+        self, 
+        quantity: float
+    ) -> tuple[float, int, int]:
+        """
+        Calculate new state after a distribution.
         
-        return int(new_total_cost / new_total_qty)
+        Args:
+            quantity: Quantity to distribute
+            
+        Returns:
+            tuple[float, int, int]: (new_quantity, new_total_cost_basis_cents, cogs_cents)
+            
+        Raises:
+            ValueError: If insufficient inventory
+        """
+        if quantity <= 0:
+            raise ValueError("Distribution quantity must be positive")
+        if not self.can_distribute(quantity):
+            raise ValueError(
+                f"Insufficient inventory. Available: {self.quantity_on_hand}, "
+                f"Requested: {quantity}"
+            )
+            
+        # Calculate COGS at current weighted average cost
+        unit_cost_cents = self.current_unit_cost_cents
+        cogs_cents = int(quantity * unit_cost_cents)
+        
+        # Calculate new totals
+        new_quantity = self.quantity_on_hand - quantity
+        new_cost_basis = self.total_cost_basis_cents - cogs_cents
+        
+        # Ensure cost basis doesn't go negative due to rounding
+        if new_cost_basis < 0:
+            new_cost_basis = 0
+            
+        return new_quantity, new_cost_basis, cogs_cents
     
     @classmethod
     def from_db_row(cls, row) -> 'InventoryItem':

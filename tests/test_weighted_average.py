@@ -40,10 +40,14 @@ class TestWeightedAverageCost:
         incoming_qty = 50
         incoming_cost_cents = 15000  # $150 total
         
-        new_avg = item.calculate_new_weighted_average(incoming_qty, incoming_cost_cents)
+        new_qty, new_basis = item.calculate_purchase_state(incoming_qty, incoming_cost_cents)
         
-        # Expected: ($200 + $150) / (100 + 50) = $350 / 150 = $2.33/unit = 233 cents
-        assert new_avg == 233
+        # Update item state to verify unit cost property
+        item.quantity_on_hand = new_qty
+        item.total_cost_basis_cents = new_basis
+        
+        # Expected: ($200 + $150) / (100 + 50) = $350 / 150 = $2.333... = 233 cents
+        assert item.current_unit_cost_cents == 233
     
     def test_donation_does_not_affect_cost_basis(self):
         """Test that donations (zero cost) reduce the weighted average."""
@@ -61,10 +65,17 @@ class TestWeightedAverageCost:
         incoming_qty = 50
         incoming_cost_cents = 0  # Donation has no cost
         
-        new_avg = item.calculate_new_weighted_average(incoming_qty, incoming_cost_cents)
+        new_qty, new_basis = item.calculate_purchase_state(incoming_qty, incoming_cost_cents)
+        
+        # Update item state
+        item.quantity_on_hand = new_qty
+        item.total_cost_basis_cents = new_basis
         
         # Expected: ($200 + $0) / (100 + 50) = $200 / 150 = $1.33/unit = 133 cents
-        assert new_avg == 133
+        assert item.current_unit_cost_cents == 133
+        
+        # Cost basis should not change
+        assert new_basis == 20000
     
     def test_integer_arithmetic_prevents_floating_point_errors(self):
         """Test that using cents prevents floating-point precision errors."""
@@ -89,23 +100,30 @@ class TestWeightedAverageCost:
         assert item.current_unit_cost_cents == 100  # $1.00
         
         # Transaction 2: Donate 50 units @ $0.00/unit
-        new_avg = item.calculate_new_weighted_average(50, 0)
-        item.quantity_on_hand = 150
-        item.total_cost_basis_cents = 10000  # Unchanged
+        new_qty, new_basis = item.calculate_purchase_state(50, 0)
+        item.quantity_on_hand = new_qty
+        item.total_cost_basis_cents = new_basis
+        
+        assert item.quantity_on_hand == 150
+        assert item.total_cost_basis_cents == 10000  # Unchanged
         assert item.current_unit_cost_cents == 66  # $0.66 (rounded down)
         
         # Transaction 3: Purchase 50 units @ $2.00/unit
-        new_avg = item.calculate_new_weighted_average(50, 10000)
-        item.quantity_on_hand = 200
-        item.total_cost_basis_cents = 20000
+        new_qty, new_basis = item.calculate_purchase_state(50, 10000)
+        item.quantity_on_hand = new_qty
+        item.total_cost_basis_cents = new_basis
+        
+        assert item.quantity_on_hand == 200
+        assert item.total_cost_basis_cents == 20000
         assert item.current_unit_cost_cents == 100  # $1.00
         
         # Transaction 4: Distribute 100 units (COGS = 100 * $1.00 = $100)
-        cogs_cents = 100 * item.current_unit_cost_cents
-        item.quantity_on_hand = 100
-        item.total_cost_basis_cents = 10000
+        # Use calculate_distribution_state
+        new_qty, new_basis, cogs_cents = item.calculate_distribution_state(100)
+        
         assert cogs_cents == 10000  # $100 COGS
-        assert item.current_unit_cost_cents == 100  # Still $1.00
+        assert new_qty == 100
+        assert new_basis == 10000
     
     def test_zero_quantity_returns_zero_cost(self):
         """Test that zero inventory returns zero unit cost."""
