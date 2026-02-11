@@ -32,42 +32,113 @@ Write-Host "========================================================" -Foregroun
 
 $ProjectRoot = $PSScriptRoot
 Set-Location -Path $ProjectRoot
-Write-Host "[INFO] Project Root: $ProjectRoot" -ForegroundColor Gray
-
 # Define paths
 $SpecFile = Join-Path $ProjectRoot "packaging\windows\AIOpsStudio.spec"
-$VenvActivate = Join-Path $ProjectRoot "venv\Scripts\Activate.ps1"
 $DistDir = Join-Path $ProjectRoot "dist"
 $BuildDir = Join-Path $ProjectRoot "build"
 
-# 2. Validation
+# Smart Venv Detection
+$VenvCandidates = @("venv", ".venv")
+$SelectedVenv = $null
+
+foreach ($candidate in $VenvCandidates) {
+    $VenvPath = Join-Path $ProjectRoot $candidate
+    $Activate = Join-Path $VenvPath "Scripts\Activate.ps1"
+    $PyInst = Join-Path $VenvPath "Scripts\pyinstaller.exe"
+    
+    if ((Test-Path $Activate) -and (Test-Path $PyInst)) {
+        $SelectedVenv = $candidate
+        $VenvActivate = $Activate
+        $PyInstaller = $PyInst
+        break
+    }
+}
+
+# Fallback if no valid venv found (try just activate)
+if (-not $SelectedVenv) {
+    foreach ($candidate in $VenvCandidates) {
+        $Activate = Join-Path $ProjectRoot "$candidate\Scripts\Activate.ps1"
+        if (Test-Path $Activate) {
+            $VenvActivate = $Activate
+            # Assume global pyinstaller if not in venv
+            $PyInstaller = "pyinstaller" 
+            break
+        }
+    }
+}
+
+if (-not $VenvActivate) {
+    # Default fallback
+    $VenvActivate = Join-Path $ProjectRoot "venv\Scripts\Activate.ps1"
+    $PyInstaller = "pyinstaller"
+}
+
+Write-Host "[DEBUG] VenvActivate: $VenvActivate" -ForegroundColor Magenta
+Write-Host "[DEBUG] PyInstaller: $PyInstaller" -ForegroundColor Magenta
+
+# 2. Validation / Generation
 if (-not (Test-Path $SpecFile)) {
-    Write-Error "Spec file not found at: $SpecFile"
-    exit 1
+    Write-Host "[INFO] Spec file not found. Generating new spec file..." -ForegroundColor Yellow
+    
+    # Ensure directory exists
+    $SpecDir = Split-Path $SpecFile -Parent
+    if (-not (Test-Path $SpecDir)) { New-Item -ItemType Directory -Force -Path $SpecDir | Out-Null }
+    
+    # Generate spec
+    # Note: We run pyinstaller to generate the spec in the specific    # Generate spec
+    try {
+        & $PyInstaller --name "AIOpsStudio" `
+            --windowed `
+            --icon "../../resources/icons/icon.ico" `
+            --add-data "../../src/database/schema.sql;database" `
+            --add-data "../../resources;resources" `
+            --specpath "packaging/windows" `
+            --noconfirm `
+            src/main.py
+                    
+        Write-Host "[SUCCESS] Generated spec file at $SpecFile" -ForegroundColor Green
+    }
+    catch {
+        Write-Error "Failed to generate spec file: $_"
+        exit 1
+    }
 }
 
 # 3. Clean previous builds
 Write-Host "[INFO] Cleaning previous builds..." -ForegroundColor Yellow
-if (Test-Path $DistDir) { Remove-Item -Path $DistDir -Recurse -Force }
-if (Test-Path $BuildDir) { Remove-Item -Path $BuildDir -Recurse -Force }
+if (Test-Path $DistDir) { 
+    try {
+        Remove-Item -Path $DistDir -Recurse -Force -ErrorAction Stop
+    }
+    catch {
+        Write-Warning "Could not fully clean dist directory (files may be in use). Proceeding anyway..."
+    }
+}
+if (Test-Path $BuildDir) { 
+    try {
+        Remove-Item -Path $BuildDir -Recurse -Force -ErrorAction Stop
+    }
+    catch {
+        Write-Warning "Could not fully clean build directory. Proceeding anyway..."
+    }
+}
 
 # 4. Activate Virtual Environment
 if (Test-Path $VenvActivate) {
     Write-Host "[INFO] Activating virtual environment..." -ForegroundColor Green
     & $VenvActivate
-} else {
+}
+else {
     Write-Warning "Virtual environment not found at $VenvActivate. Using global python/pip."
 }
 
 # 5. Run PyInstaller
 Write-Host "[INFO] Running PyInstaller..." -ForegroundColor Green
 try {
-    # Check if pyinstaller is installed
-    pyinstaller --version | Out-Null
-    
     # Run build
-    pyinstaller --noconfirm --clean $SpecFile
-} catch {
+    & $PyInstaller --noconfirm --clean $SpecFile
+}
+catch {
     Write-Error "PyInstaller failed. Error: $_"
     exit 1
 }
@@ -77,7 +148,8 @@ $ExePath = Join-Path $DistDir "AIOpsStudio\AIOpsStudio.exe"
 if (Test-Path $ExePath) {
     Write-Host "[SUCCESS] Build created successfully at:" -ForegroundColor Green
     Write-Host "    $ExePath" -ForegroundColor White
-} else {
+}
+else {
     Write-Error "Build failed. Executable not found at $ExePath"
     exit 1
 }
@@ -91,10 +163,12 @@ if ($Cert) {
     try {
         Set-AuthenticodeSignature -FilePath $ExePath -Certificate $Cert -TimestampServer "http://timestamp.digicert.com"
         Write-Host "[SUCCESS] Executable signed." -ForegroundColor Green
-    } catch {
+    }
+    catch {
         Write-Warning "Signing failed: $_"
     }
-} else {
+}
+else {
     Write-Host "[INFO] No code signing certificate found. Attempting to create one..." -ForegroundColor Yellow
     try {
         $Cert = New-SelfSignedCertificate -Type CodeSigningCert -Subject $CertSubject -KeySpec Signature -TextExtension @("2.5.29.37={text}1.3.6.1.5.5.7.3.3")
@@ -103,7 +177,8 @@ if ($Cert) {
         # Try signing again
         Set-AuthenticodeSignature -FilePath $ExePath -Certificate $Cert -TimestampServer "http://timestamp.digicert.com"
         Write-Host "[SUCCESS] Executable signed." -ForegroundColor Green
-    } catch {
+    }
+    catch {
         Write-Warning "Could not create certificate or sign executable. Run script as Administrator."
         Write-Warning "Error: $_"
     }

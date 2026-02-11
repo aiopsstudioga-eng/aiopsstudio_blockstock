@@ -5,12 +5,13 @@ Items management page for viewing and managing inventory items.
 from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QPushButton,
     QTableWidget, QTableWidgetItem, QHeaderView,
-    QLabel, QLineEdit, QMessageBox, QComboBox
+    QLabel, QLineEdit, QMessageBox, QComboBox, QFileDialog
 )
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QColor
 
 from services.inventory_service import InventoryService
+from services.data_service import DataService
 from ui.item_dialog import ItemDialog
 
 
@@ -47,6 +48,7 @@ class ItemsPage(QWidget):
         super().__init__(parent)
         
         self.service = service
+        self.data_service = DataService(service) if service else None
         self.active_filters = {}  # Store active filters: {column_index: filter_value}
         self.init_ui()
         self.load_items()
@@ -96,6 +98,18 @@ class ItemsPage(QWidget):
             }
         """)
         new_btn.clicked.connect(self.create_item)
+        
+        # Import/Export Buttons
+        self.btn_import = QPushButton("Import CSV")
+        self.btn_import.clicked.connect(self.import_csv)
+        self.btn_import.setStyleSheet("padding: 10px 15px; background-color: #95a5a6; color: white; border-radius: 4px;")
+        
+        self.btn_export = QPushButton("Export CSV")
+        self.btn_export.clicked.connect(self.export_csv)
+        self.btn_export.setStyleSheet("padding: 10px 15px; background-color: #95a5a6; color: white; border-radius: 4px;")
+        
+        header_layout.addWidget(self.btn_import)
+        header_layout.addWidget(self.btn_export)
         header_layout.addWidget(new_btn)
         
         layout.addLayout(header_layout)
@@ -351,3 +365,44 @@ class ItemsPage(QWidget):
                 self.load_items()
             except Exception as e:
                 QMessageBox.critical(self, "Error", f"Failed to delete item: {e}")
+
+    def import_csv(self):
+        """Import items from CSV."""
+        if not self.data_service:
+            return
+            
+        file_name, _ = QFileDialog.getOpenFileName(
+            self, "Import Items", "", "CSV Files (*.csv);;All Files (*)"
+        )
+        
+        if file_name:
+            success, fail, errors = self.data_service.import_items_from_csv(file_name)
+            
+            msg = f"Import Complete\n\nSuccess: {success}\nFailed: {fail}"
+            if errors:
+                msg += "\n\nErrors:\n" + "\n".join(errors[:10])
+                if len(errors) > 10:
+                    msg += f"\n...and {len(errors) - 10} more."
+            
+            if fail > 0:
+                QMessageBox.warning(self, "Import Results", msg)
+            else:
+                QMessageBox.information(self, "Import Results", msg)
+                
+            if success > 0:
+                self.load_items()
+
+    def export_csv(self):
+        """Export items to CSV."""
+        if not self.data_service:
+            return
+            
+        file_name, _ = QFileDialog.getSaveFileName(
+            self, "Export Items", "inventory_export.csv", "CSV Files (*.csv);;All Files (*)"
+        )
+        
+        if file_name:
+            if self.data_service.export_items_to_csv(file_name):
+                QMessageBox.information(self, "Export Successful", f"Data exported to {file_name}")
+            else:
+                QMessageBox.critical(self, "Export Failed", "An error occurred during export.")

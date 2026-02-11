@@ -379,3 +379,74 @@ class ReportingService:
             })
         
         return transactions
+    
+    # ========================================================================
+    # DASHBOARD STATISTICS
+    # ========================================================================
+    
+    def get_dashboard_stats(self) -> Dict:
+        """
+        Get aggregated statistics for the dashboard.
+        
+        Returns:
+            Dict containing:
+            - total_inventory_value_dollars
+            - low_stock_count
+            - total_items_count
+            - top_distributed_items (list)
+            - value_by_category (list)
+        """
+        conn = self.db_manager.get_connection()
+        cursor = conn.cursor()
+        
+        stats = {}
+        
+        # 1. Total Inventory Value & Item Counts
+        cursor.execute("""
+            SELECT 
+                COUNT(*) as total_items,
+                SUM(CASE WHEN quantity_on_hand < reorder_threshold THEN 1 ELSE 0 END) as low_stock,
+                SUM(total_cost_basis_cents) as total_value_cents
+            FROM inventory_items
+            WHERE is_active = 1
+        """)
+        row = cursor.fetchone()
+        stats['total_items_count'] = row['total_items']
+        stats['low_stock_count'] = row['low_stock']
+        stats['total_inventory_value_dollars'] = (row['total_value_cents'] or 0) / 100.0
+        
+        # 2. Value by Category
+        cursor.execute("""
+            SELECT 
+                c.name,
+                SUM(i.total_cost_basis_cents) as value_cents
+            FROM inventory_items i
+            JOIN item_categories c ON i.category_id = c.id
+            WHERE i.is_active = 1
+            GROUP BY c.name
+            HAVING value_cents > 0
+            ORDER BY value_cents DESC
+        """)
+        stats['value_by_category'] = [
+            {'category': row['name'], 'value_dollars': row['value_cents'] / 100.0}
+            for row in cursor.fetchall()
+        ]
+        
+        # 3. Top Distributed Items (All Time)
+        cursor.execute("""
+            SELECT 
+                i.name,
+                ABS(SUM(t.quantity_change)) as total_distributed
+            FROM inventory_transactions t
+            JOIN inventory_items i ON t.item_id = i.id
+            WHERE t.transaction_type = 'DISTRIBUTION'
+            GROUP BY i.name
+            ORDER BY total_distributed DESC
+            LIMIT 5
+        """)
+        stats['top_distributed_items'] = [
+            {'name': row['name'], 'quantity': row['total_distributed']}
+            for row in cursor.fetchall()
+        ]
+        
+        return stats

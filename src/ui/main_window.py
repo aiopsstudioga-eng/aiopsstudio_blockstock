@@ -16,6 +16,8 @@ from utils.platform_detect import (
     get_modifier_key, should_use_native_menubar
 )
 from services.inventory_service import InventoryService
+from services.reporting_service import ReportingService
+from ui.dashboard_page import DashboardPage
 
 
 class MainWindow(QMainWindow):
@@ -27,6 +29,8 @@ class MainWindow(QMainWindow):
         
         # Initialize service
         self.service = InventoryService()
+        self.inventory_service = self.service # Alias for consistency
+        self.reporting_service = ReportingService()
         
         # Set up UI
         self.init_ui()
@@ -64,7 +68,14 @@ class MainWindow(QMainWindow):
         self.add_pages()
         
         # Show dashboard by default
+        # Show dashboard by default
         self.content_stack.setCurrentIndex(0)
+        
+    def switch_page(self, index):
+        """Switch page and refresh data."""
+        self.content_stack.setCurrentIndex(index)
+        if index == 0:
+            self.dashboard_page.load_data()
         
     def create_menu_bar(self):
         """Create menu bar with platform-specific behavior."""
@@ -194,7 +205,7 @@ class MainWindow(QMainWindow):
         
         for text, index in nav_buttons:
             btn = QPushButton(text)
-            btn.clicked.connect(lambda checked, i=index: self.content_stack.setCurrentIndex(i))
+            btn.clicked.connect(lambda checked, i=index: self.switch_page(i))
             layout.addWidget(btn)
         
         layout.addStretch()
@@ -209,8 +220,9 @@ class MainWindow(QMainWindow):
     def add_pages(self):
         """Add content pages to stack."""
         # Dashboard
-        dashboard = self.create_dashboard_page()
+        dashboard = DashboardPage(self.reporting_service)
         self.content_stack.addWidget(dashboard)
+        self.dashboard_page = dashboard # Store reference
         
         # Items page (functional)
         from ui.items_page import ItemsPage
@@ -355,75 +367,6 @@ class MainWindow(QMainWindow):
             "#e67e22": "#d35400",  # Orange
         }
         return color_map.get(hex_color, hex_color)
-
-    
-    def create_dashboard_page(self) -> QWidget:
-        """Create dashboard page."""
-        page = QWidget()
-        layout = QVBoxLayout(page)
-        layout.setContentsMargins(40, 40, 40, 40)
-        
-        # Title
-        title = QLabel("Dashboard")
-        title.setStyleSheet("font-size: 24pt; font-weight: bold; margin-bottom: 20px;")
-        layout.addWidget(title)
-        
-        # Get statistics
-        try:
-            items = self.service.get_all_items()
-            below_threshold = self.service.get_items_below_threshold()
-            
-            total_items = len(items)
-            total_value = sum(item.total_inventory_value_dollars for item in items)
-            low_stock_count = len(below_threshold)
-            
-            # Stats cards
-            stats_layout = QHBoxLayout()
-            
-            stats_layout.addWidget(self.create_stat_card(
-                "Total Items", str(total_items), "#3498db"
-            ))
-            stats_layout.addWidget(self.create_stat_card(
-                "Total Value", f"${total_value:,.2f}", "#2ecc71"
-            ))
-            stats_layout.addWidget(self.create_stat_card(
-                "Low Stock", str(low_stock_count), "#e74c3c" if low_stock_count > 0 else "#95a5a6"
-            ))
-            
-            layout.addLayout(stats_layout)
-            
-        except Exception as e:
-            error_label = QLabel(f"Error loading dashboard: {e}")
-            error_label.setStyleSheet("color: red;")
-            layout.addWidget(error_label)
-        
-        layout.addStretch()
-        
-        return page
-    
-    def create_stat_card(self, title: str, value: str, color: str) -> QWidget:
-        """Create a statistics card."""
-        card = QWidget()
-        card.setStyleSheet(f"""
-            QWidget {{
-                background-color: white;
-                border-left: 5px solid {color};
-                border-radius: 5px;
-            }}
-        """)
-        
-        layout = QVBoxLayout(card)
-        layout.setContentsMargins(20, 20, 20, 20)
-        
-        title_label = QLabel(title)
-        title_label.setStyleSheet("font-size: 12pt; color: #7f8c8d;")
-        layout.addWidget(title_label)
-        
-        value_label = QLabel(value)
-        value_label.setStyleSheet("font-size: 28pt; font-weight: bold;")
-        layout.addWidget(value_label)
-        
-        return card
     
     def create_placeholder_page(self, title: str, description: str) -> QWidget:
         """Create a placeholder page."""
@@ -447,6 +390,8 @@ class MainWindow(QMainWindow):
         layout.addWidget(coming_soon)
         
         layout.addStretch()
+        
+        return page
         
         return page
     
