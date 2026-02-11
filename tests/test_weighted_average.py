@@ -186,7 +186,6 @@ class TestInventoryItemModel:
             sku="BEAN001",
             name="Canned Beans",
             category_id=3,
-            uom="Can",
             quantity_on_hand=50,
             reorder_threshold=20,
             total_cost_basis_cents=5000
@@ -195,7 +194,6 @@ class TestInventoryItemModel:
         assert item.sku == "BEAN001"
         assert item.name == "Canned Beans"
         assert item.category_id == 3
-        assert item.uom == "Can"
         assert item.quantity_on_hand == 50
         assert item.reorder_threshold == 20
         assert item.total_cost_basis_cents == 5000
@@ -225,11 +223,10 @@ class TestInventoryItemModel:
         item = InventoryItem(
             sku="TEST001",
             name="Test Item",
-            quantity_on_hand=50,
-            uom="Box"
+            quantity_on_hand=50
         )
         
-        assert str(item) == "Test Item (TEST001) - 50 Box"
+        assert str(item) == "Test Item (TEST001) - 50"
 
 
 if __name__ == "__main__":

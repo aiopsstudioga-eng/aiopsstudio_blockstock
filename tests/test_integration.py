@@ -52,7 +52,6 @@ def test_full_item_lifecycle(tmp_path):
         sku="TEST001",
         name="Test Item",
         category_id=None,
-        uom="Unit",
         reorder_threshold=10
     )
     assert item.quantity_on_hand == 0
