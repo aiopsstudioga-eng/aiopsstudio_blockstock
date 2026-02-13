@@ -69,10 +69,11 @@ CREATE TABLE IF NOT EXISTS inventory_transactions (
     ref_transaction_id INTEGER,
     FOREIGN KEY (item_id) REFERENCES inventory_items(id),
     FOREIGN KEY (ref_transaction_id) REFERENCES inventory_transactions(id),
-    CHECK (transaction_type IN ('PURCHASE', 'DONATION', 'DISTRIBUTION')),
+    CHECK (transaction_type IN ('PURCHASE', 'DONATION', 'DISTRIBUTION', 'CORRECTION')),
     CHECK (
         (transaction_type = 'DISTRIBUTION' AND quantity_change < 0) OR
-        (transaction_type IN ('PURCHASE', 'DONATION') AND quantity_change > 0)
+        (transaction_type IN ('PURCHASE', 'DONATION') AND quantity_change > 0) OR
+        (transaction_type = 'CORRECTION') -- Corrections can be pos or neg
     )
 );
 

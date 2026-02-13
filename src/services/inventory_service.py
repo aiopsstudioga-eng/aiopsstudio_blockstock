@@ -644,8 +644,8 @@ class InventoryService:
             cursor.execute("""
                 INSERT INTO inventory_transactions
                 (item_id, transaction_type, quantity_change, unit_cost_cents,
-                 reason_code, notes, ref_transaction_id, created_by)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                 reason_code, notes, ref_transaction_id, created_by, transaction_date)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
             """, (
                 item.id,
                 TransactionType.CORRECTION.value,
@@ -654,7 +654,8 @@ class InventoryService:
                 ReasonCode.VOID.value,
                 f"Void of Tx #{transaction_id}: {reason}",
                 transaction_id,
-                "system" # TODO: Pass actual user
+                "system", # TODO: Pass actual user
+                datetime.now()
             ))
             correction_id = cursor.lastrowid
             

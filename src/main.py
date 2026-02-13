@@ -13,6 +13,7 @@ sys.path.insert(0, str(src_dir))
 from PyQt6.QtWidgets import QApplication, QDialog, QVBoxLayout, QLabel, QPushButton, QHBoxLayout
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QFont
+from datetime import datetime
 from ui.main_window import MainWindow
 
 
@@ -151,12 +152,25 @@ def setup_database(appdata_dir: str, db_name: str) -> str:
     db_path = os.path.join(appdata_dir, db_name)
     print(f"Using database at: {db_path}")
     
-    if not os.path.exists(db_path):
+    is_new_db = not os.path.exists(db_path)
+    
+    if is_new_db:
         print(f"Initializing {db_name}...")
         schema_path = get_schema_path()
         try:
             init_database(db_path, schema_path)
             print("Database initialized successfully.")
+            
+            # Seed data if Training Mode
+            if db_name == "training.db":
+                try:
+                    from database.seed_data import seed_training_data
+                    seed_training_data(db_path)
+                except ImportError as e:
+                    print(f"Could not import seed script: {e}")
+                except Exception as e:
+                    print(f"Error checking/seeding data: {e}")
+
         except Exception as e:
             print(f"Error initializing database: {e}")
             sys.exit(1)
@@ -211,6 +225,31 @@ def main():
     
     window.show()
     
+    # Global Exception Handler
+    def exception_hook(exctype, value, traceback_obj):
+        import traceback
+        from PyQt6.QtWidgets import QMessageBox
+
+        error_msg = "".join(traceback.format_exception(exctype, value, traceback_obj))
+        print(f"Unhandled Exception: {error_msg}")
+        
+        # Write to crash log
+        log_path = os.path.join(appdata_dir, "crash_log.txt")
+        with open(log_path, "w") as f:
+            f.write(f"Timestamp: {datetime.now()}\n")
+            f.write(error_msg)
+            
+        # Attempt to show dialog
+        try:
+            QMessageBox.critical(None, "Critical Error", f"An unhandled error occurred:\n\n{value}\n\nLog saved to: {log_path}")
+        except:
+            pass
+            
+        sys.__excepthook__(exctype, value, traceback_obj)
+        sys.exit(1)
+
+    sys.excepthook = exception_hook
+
     # Run event loop
     sys.exit(app.exec())
 

@@ -29,6 +29,33 @@ Each entry follows this structure:
 
 ## Development Entries
 
+### 2026-02-13 | Void Workflow & Stability Hardening
+
+**Phase:** Phase 3 Preparation / Quality Assurance
+**Focus:** Void Functionality, Training Mode Realism, and Crash Protection
+
+#### Accomplishments
+- 🚫 **Implemented Void/Correction Workflow**:
+    - Added "Void" button to Transaction History.
+    - Implemented "Correction" transaction type (`CORRECTION`) to maintain audit trail while reversing inventory/financial impact.
+    - Handled distinct logic for Purchases (restore cost), Distributions (restore inventory), and Donations.
+- 🎓 **Enhanced Training Mode**:
+    - **Production Cloning**: Training Mode now clones existing production inventory items instead of using dummy data.
+    - **Opening Balances**: Automatically generates opening balance transactions in Training Mode to match current stock levels, allowing immediate void testing.
+- 🛡️ **Stability & Safety**:
+    - **Global Crash Handler**: Implemented a system-wide exception hook that catches unhandled errors, logs them to `crash_log.txt`, and notifies the user via dialog instead of silently crashing.
+    - **Database Integrity**: Updated schema check constraints to allow `CORRECTION` transaction types.
+    - **UI Hardening**: Fixed sort-related crashes in Transaction History by safely handling `None` dates and items.
+
+#### Technical Decisions
+- **Audit-Safe Voiding**: Instead of deleting records, we create a compensating `CORRECTION` transaction. This ensures the ledger always reflects reality and prevents "ghost" inventory changes.
+- **Explicit Timestamps**: Discovered that relying on database default timestamps caused race conditions in UI sorting immediately after creation. Switched to explicitly setting `transaction_date` in Python before insertion.
+
+#### Next Steps
+- Begin Phase 3: "Connected" features (Real-time features/WebSockets).
+
+---
+
 ### 2026-02-07 | Database Path Fix & Rebranding
 
 **Phase:** Development / Bug Fix  

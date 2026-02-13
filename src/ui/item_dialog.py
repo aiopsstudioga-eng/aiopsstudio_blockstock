@@ -62,6 +62,33 @@ class ItemDialog(QDialog):
             self.history_tab = QWidget()
             self.setup_history_tab()
             self.tabs.addTab(self.history_tab, "Transaction History")
+
+        # Buttons Setup (Common)
+        button_layout = QHBoxLayout()
+        button_layout.addStretch()
+        
+        cancel_btn = QPushButton("Close" if self.is_edit_mode else "Cancel")
+        cancel_btn.clicked.connect(self.reject)
+        button_layout.addWidget(cancel_btn)
+        
+        save_btn = QPushButton("Save Item")
+        save_btn.setDefault(True)
+        save_btn.clicked.connect(self.save_item)
+        save_btn.setStyleSheet("""
+            QPushButton {
+                background-color: #3498db;
+                color: white;
+                padding: 8px 20px;
+                border-radius: 4px;
+                font-weight: bold;
+            }
+            QPushButton:hover {
+                background-color: #2980b9;
+            }
+        """)
+        button_layout.addWidget(save_btn)
+        
+        layout.addLayout(button_layout)
             
     def setup_details_tab(self):
         """Setup the item details form."""
@@ -138,7 +165,9 @@ class ItemDialog(QDialog):
             
         transactions = self.service.get_transactions_by_item(self.item.id)
         # Sort by date desc
-        transactions.sort(key=lambda x: x.transaction_date, reverse=True)
+        # Sort by date desc (handle None dates safely)
+        from datetime import datetime
+        transactions.sort(key=lambda x: x.transaction_date or datetime.min, reverse=True)
         
         self.tx_table.setRowCount(len(transactions))
         
@@ -179,10 +208,12 @@ class ItemDialog(QDialog):
                 
                 # Strikeout entire row appearance (simulated)
                 for col in range(5):
-                    font = self.tx_table.item(row, col).font()
-                    font.setStrikeOut(True)
-                    self.tx_table.item(row, col).setFont(font)
-                    self.tx_table.item(row, col).setForeground(QColor("gray"))
+                    item = self.tx_table.item(row, col)
+                    if item:
+                        font = item.font()
+                        font.setStrikeOut(True)
+                        item.setFont(font)
+                        item.setForeground(QColor("gray"))
                     
             self.tx_table.setItem(row, 5, status_item)
             
@@ -221,32 +252,6 @@ class ItemDialog(QDialog):
                 QMessageBox.critical(self, "Error", f"An unexpected error occurred: {e}")
 
         
-        # Buttons Setup (Common)
-        button_layout = QHBoxLayout()
-        button_layout.addStretch()
-        
-        cancel_btn = QPushButton("Close" if self.is_edit_mode else "Cancel")
-        cancel_btn.clicked.connect(self.reject)
-        button_layout.addWidget(cancel_btn)
-        
-        save_btn = QPushButton("Save Item")
-        save_btn.setDefault(True)
-        save_btn.clicked.connect(self.save_item)
-        save_btn.setStyleSheet("""
-            QPushButton {
-                background-color: #3498db;
-                color: white;
-                padding: 8px 20px;
-                border-radius: 4px;
-                font-weight: bold;
-            }
-            QPushButton:hover {
-                background-color: #2980b9;
-            }
-        """)
-        button_layout.addWidget(save_btn)
-        
-        layout.addLayout(button_layout)
     
     def load_categories(self):
         """Load categories into combo box."""

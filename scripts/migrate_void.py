@@ -9,7 +9,7 @@ sys.path.insert(0, str(src_path))
 
 from database.connection import get_db_manager
 
-def get_app_data_db_path():
+def get_app_data_db_path(filename="inventory.db"):
     """Get the path to the AppData database file."""
     app_data = os.getenv('LOCALAPPDATA')
     if not app_data:
@@ -19,14 +19,14 @@ def get_app_data_db_path():
     if not os.path.exists(app_dir):
         os.makedirs(app_dir)
         
-    return os.path.join(app_dir, 'inventory.db')
+    return os.path.join(app_dir, filename)
 
-def migrate_database():
-    db_path = get_app_data_db_path()
+def migrate_database(db_filename="inventory.db"):
+    db_path = get_app_data_db_path(db_filename)
     print(f"Migrating database at: {db_path}")
     
     if not os.path.exists(db_path):
-        print("Database not found. Initial schema will handle new columns.")
+        print(f"Database {db_filename} not found at {db_path}. Skipping.")
         return
 
     manager = get_db_manager(db_path)
@@ -49,7 +49,8 @@ def migrate_database():
             print("Adding 'ref_transaction_id' column...")
             cursor.execute("ALTER TABLE inventory_transactions ADD COLUMN ref_transaction_id INTEGER REFERENCES inventory_transactions(id)")
             
-    print("Migration complete.")
+    print(f"Migration complete for {db_filename}.")
 
 if __name__ == "__main__":
-    migrate_database()
+    migrate_database("inventory.db")
+    migrate_database("training.db")

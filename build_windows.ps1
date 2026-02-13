@@ -90,7 +90,7 @@ if (-not (Test-Path $SpecFile)) {
         & $PyInstaller --name "AIOpsStudio" `
             --windowed `
             --icon "../../resources/icons/icon.ico" `
-            --add-data "../../src/database/schema.sql;database" `
+            --add-data "../../src/database/schema.sql;src/database" `
             --add-data "../../resources;resources" `
             --specpath "packaging/windows" `
             --noconfirm `
