@@ -509,6 +509,7 @@ class InventoryService:
     # CATEGORY OPERATIONS
     # ========================================================================
     
+    
     def get_all_categories(self) -> List[Category]:
         """
         Get all categories.
@@ -522,3 +523,178 @@ class InventoryService:
         cursor.execute("SELECT * FROM item_categories ORDER BY name")
         
         return [Category.from_db_row(row) for row in cursor.fetchall()]
+
+    # ========================================================================
+    # VOID / CORRECTION OPERATIONS
+    # ========================================================================
+
+    def void_transaction(
+        self,
+        transaction_id: int,
+        reason: str
+    ) -> Tuple[InventoryItem, Transaction, Transaction]:
+        """
+        Void a transaction by creating a compensating correction transaction.
+        
+        Args:
+            transaction_id: ID of the transaction to void
+            reason: Reason for voiding
+            
+        Returns:
+            Tuple of (Updated Item, Original Transaction, Correction Transaction)
+            
+        Raises:
+            ValueError: If transaction not found, already voided, or logic constraints fail.
+        """
+        with self.db_manager.transaction() as conn:
+            cursor = conn.cursor()
+            
+            # 1. Fetch original transaction
+            cursor.execute("SELECT * FROM inventory_transactions WHERE id = ?", (transaction_id,))
+            row = cursor.fetchone()
+            if not row:
+                raise ValueError(f"Transaction {transaction_id} not found")
+            
+            original_tx = Transaction.from_db_row(row)
+            
+            if original_tx.is_voided:
+                raise ValueError(f"Transaction {transaction_id} is already voided")
+            
+            # 2. Fetch current item state
+            cursor.execute("SELECT * FROM inventory_items WHERE id = ?", (original_tx.item_id,))
+            item_row = cursor.fetchone()
+            if not item_row:
+                raise ValueError(f"Item {original_tx.item_id} not found")
+            
+            item = InventoryItem.from_db_row(item_row)
+            
+            # 3. Determine Reversal Logic based on Type
+            correction_qty = 0.0
+            correction_value_cents = 0
+            
+            if original_tx.transaction_type == TransactionType.PURCHASE:
+                # Voiding a PURCHASE means REMOVING stock and REMOVING cost
+                # Constraint: Must have enough stock to remove
+                if item.quantity_on_hand < original_tx.quantity_change:
+                    raise ValueError(
+                        f"Cannot void purchase. Insufficient stock. "
+                        f"Have: {item.quantity_on_hand}, Need: {original_tx.quantity_change}"
+                    )
+                
+                # Check if this would make cost negative (shouldn't if logic holds, but safety first)
+                if item.total_cost_basis_cents < original_tx.total_financial_impact_cents:
+                     # Note: for Purchase, 'unit_cost * qty' determines added value.
+                     # Transaction model stores unit_cost_cents. 
+                     # original_tx.total_financial_impact_cents is usually 0 for purchases in current model?
+                     # Let's re-calculate the value added.
+                     pass
+
+                # Calculate value to remove: simple exact reversal of input
+                # Input was: qty * unit_cost
+                value_to_remove = int(original_tx.quantity_change * original_tx.unit_cost_cents)
+                
+                new_qty = item.quantity_on_hand - original_tx.quantity_change
+                new_cost_basis = item.total_cost_basis_cents - value_to_remove
+                
+                # Setup correction tx params
+                correction_qty = -original_tx.quantity_change
+                # financial_impact for correction? null for now, just updating basis.
+                
+            elif original_tx.transaction_type == TransactionType.DONATION:
+                 # Voiding a DONATION means REMOVING stock (Value is 0)
+                if item.quantity_on_hand < original_tx.quantity_change:
+                     raise ValueError(
+                        f"Cannot void donation. Insufficient stock. "
+                        f"Have: {item.quantity_on_hand}, Need: {original_tx.quantity_change}"
+                    )
+                
+                new_qty = item.quantity_on_hand - original_tx.quantity_change
+                new_cost_basis = item.total_cost_basis_cents # Unchanged
+                
+                correction_qty = -original_tx.quantity_change
+
+            elif original_tx.transaction_type == TransactionType.DISTRIBUTION:
+                # Voiding a DISTRIBUTION means ADDING stock and ADDING back value (COGS)
+                # This is "Un-distributing"
+                
+                # We need to know what the COGS impact was.
+                # The 'total_financial_impact_cents' field on the original transaction stores this.
+                cogs_to_restore = original_tx.total_financial_impact_cents
+                qty_to_restore = abs(original_tx.quantity_change) # distribute is negative, so abs it
+                
+                new_qty = item.quantity_on_hand + qty_to_restore
+                new_cost_basis = item.total_cost_basis_cents + cogs_to_restore
+                
+                correction_qty = qty_to_restore
+            else:
+                raise ValueError("Cannot void this transaction type")
+            
+            # 4. Update Item
+            if new_cost_basis < 0:
+                new_cost_basis = 0 # Safety floor
+                
+            cursor.execute("""
+                UPDATE inventory_items
+                SET quantity_on_hand = ?,
+                    total_cost_basis_cents = ?
+                WHERE id = ?
+            """, (new_qty, new_cost_basis, item.id))
+            
+            # 5. Create Correction Transaction
+            cursor.execute("""
+                INSERT INTO inventory_transactions
+                (item_id, transaction_type, quantity_change, unit_cost_cents,
+                 reason_code, notes, ref_transaction_id, created_by)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            """, (
+                item.id,
+                TransactionType.CORRECTION.value,
+                correction_qty,
+                original_tx.unit_cost_cents, # Keep original unit cost for reference
+                ReasonCode.VOID.value,
+                f"Void of Tx #{transaction_id}: {reason}",
+                transaction_id,
+                "system" # TODO: Pass actual user
+            ))
+            correction_id = cursor.lastrowid
+            
+            # 6. Mark Original as Voided
+            cursor.execute("""
+                UPDATE inventory_transactions
+                SET is_voided = 1
+                WHERE id = ?
+            """, (transaction_id,))
+            
+            # Fetch return objects
+            cursor.execute("SELECT * FROM inventory_items WHERE id = ?", (item.id,))
+            updated_item = InventoryItem.from_db_row(cursor.fetchone())
+            
+            cursor.execute("SELECT * FROM inventory_transactions WHERE id = ?", (correction_id,))
+            correction_tx = Transaction.from_db_row(cursor.fetchone())
+            
+            # Refresh original object to show voided state
+            cursor.execute("SELECT * FROM inventory_transactions WHERE id = ?", (transaction_id,))
+            original_tx_updated = Transaction.from_db_row(cursor.fetchone())
+            
+            return updated_item, original_tx_updated, correction_tx
+
+    def get_transactions_by_item(self, item_id: int) -> List[Transaction]:
+        """
+        Get all transactions for a specific item.
+        
+        Args:
+            item_id: ID of the item
+            
+        Returns:
+            List of Transaction objects
+        """
+        conn = self.db_manager.get_connection()
+        cursor = conn.cursor()
+        
+        cursor.execute("""
+            SELECT * FROM inventory_transactions 
+            WHERE item_id = ? 
+            ORDER BY transaction_date DESC
+        """, (item_id,))
+        
+        return [Transaction.from_db_row(row) for row in cursor.fetchall()]

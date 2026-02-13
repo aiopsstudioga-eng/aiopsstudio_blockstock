@@ -15,13 +15,15 @@ class TransactionType(Enum):
     PURCHASE = "PURCHASE"
     DONATION = "DONATION"
     DISTRIBUTION = "DISTRIBUTION"
+    CORRECTION = "CORRECTION"  # For void/reversal transactions
 
 
 class ReasonCode(Enum):
-    """Reason codes for distribution transactions."""
-    CLIENT = "CLIENT"  # Distributed to clients
-    SPOILAGE = "SPOILAGE"  # Spoiled/expired items
-    INTERNAL = "INTERNAL"  # Internal use
+    """Reason codes for distributions and corrections."""
+    CLIENT = "CLIENT"
+    SPOILAGE = "SPOILAGE"
+    INTERNAL = "INTERNAL"
+    VOID = "VOID"  # Transaction was voided
 
 
 @dataclass
@@ -35,16 +37,18 @@ class Transaction:
     item_id: int
     transaction_type: TransactionType
     quantity_change: float
-    unit_cost_cents: int = 0  # Actual cost per unit (0 for donations)
-    fair_market_value_cents: int = 0  # For impact reports (donations)
-    total_financial_impact_cents: int = 0  # COGS impact (distributions)
-    reason_code: Optional[str] = None  # For distributions
-    supplier: Optional[str] = None  # For purchases
-    donor: Optional[str] = None  # For donations
+    unit_cost_cents: int = 0
+    fair_market_value_cents: int = 0
+    total_financial_impact_cents: int = 0
+    reason_code: Optional[str] = None
+    supplier: Optional[str] = None
+    donor: Optional[str] = None
     notes: Optional[str] = None
     transaction_date: Optional[datetime] = None
     created_by: str = "system"
     id: Optional[int] = None
+    is_voided: bool = False
+    ref_transaction_id: Optional[int] = None
     
     def __post_init__(self):
         """Validate transaction data after initialization."""
@@ -56,9 +60,10 @@ class Transaction:
         if self.transaction_type == TransactionType.DISTRIBUTION:
             if self.quantity_change >= 0:
                 raise ValueError("Distribution transactions must have negative quantity_change")
-        else:  # PURCHASE or DONATION
+        elif self.transaction_type in (TransactionType.PURCHASE, TransactionType.DONATION):
             if self.quantity_change <= 0:
                 raise ValueError("Purchase/Donation transactions must have positive quantity_change")
+        # CORRECTION can be positive or negative depending on what it reverses
     
     @property
     def unit_cost_dollars(self) -> float:
@@ -77,15 +82,12 @@ class Transaction:
     
     @classmethod
     def from_db_row(cls, row) -> 'Transaction':
-        """
-        Create Transaction instance from database row.
+        """Create Transaction instance from database row."""
+        # Handle new columns safely (for backwards compatibility if row assumes old schema, 
+        # though migration should handle it)
+        is_voided = bool(row['is_voided']) if 'is_voided' in row.keys() else False
+        ref_id = row['ref_transaction_id'] if 'ref_transaction_id' in row.keys() else None
         
-        Args:
-            row: SQLite row object
-            
-        Returns:
-            Transaction: Transaction instance
-        """
         return cls(
             id=row['id'],
             item_id=row['item_id'],
@@ -99,7 +101,9 @@ class Transaction:
             donor=row['donor'],
             notes=row['notes'],
             transaction_date=datetime.fromisoformat(row['transaction_date']) if row['transaction_date'] else None,
-            created_by=row['created_by']
+            created_by=row['created_by'],
+            is_voided=is_voided,
+            ref_transaction_id=ref_id
         )
     
     def to_dict(self) -> dict:
@@ -117,5 +121,7 @@ class Transaction:
             'donor': self.donor,
             'notes': self.notes,
             'transaction_date': self.transaction_date.isoformat() if self.transaction_date else None,
-            'created_by': self.created_by
+            'created_by': self.created_by,
+            'is_voided': self.is_voided,
+            'ref_transaction_id': self.ref_transaction_id
         }

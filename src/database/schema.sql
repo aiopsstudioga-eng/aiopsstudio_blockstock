@@ -65,7 +65,10 @@ CREATE TABLE IF NOT EXISTS inventory_transactions (
     notes TEXT,
     transaction_date DATETIME DEFAULT CURRENT_TIMESTAMP,
     created_by TEXT DEFAULT 'system',
+    is_voided BOOLEAN DEFAULT 0,
+    ref_transaction_id INTEGER,
     FOREIGN KEY (item_id) REFERENCES inventory_items(id),
+    FOREIGN KEY (ref_transaction_id) REFERENCES inventory_transactions(id),
     CHECK (transaction_type IN ('PURCHASE', 'DONATION', 'DISTRIBUTION')),
     CHECK (
         (transaction_type = 'DISTRIBUTION' AND quantity_change < 0) OR

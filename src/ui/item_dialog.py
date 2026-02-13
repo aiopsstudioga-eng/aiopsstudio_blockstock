@@ -5,12 +5,15 @@ Item management dialog for creating and editing inventory items.
 from PyQt6.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QFormLayout,
     QLabel, QLineEdit, QComboBox, QSpinBox, QPushButton,
-    QMessageBox
+    QMessageBox, QTabWidget, QWidget, QTableWidget, 
+    QTableWidgetItem, QHeaderView
 )
 from PyQt6.QtCore import Qt
+from PyQt6.QtGui import QColor, QFont
 
 from services.inventory_service import InventoryService
 from models.item import InventoryItem
+from models.transaction import TransactionType
 
 
 class ItemDialog(QDialog):
@@ -40,9 +43,29 @@ class ItemDialog(QDialog):
         """Initialize user interface."""
         title = "Edit Item" if self.is_edit_mode else "New Item"
         self.setWindowTitle(title)
-        self.setMinimumWidth(500)
+        self.setMinimumWidth(800)
+        self.setMinimumHeight(600)
         
         layout = QVBoxLayout(self)
+        
+        # Tabs
+        self.tabs = QTabWidget()
+        layout.addWidget(self.tabs)
+        
+        # Tab 1: Item Details
+        self.details_tab = QWidget()
+        self.setup_details_tab()
+        self.tabs.addTab(self.details_tab, "Item Details")
+        
+        # Tab 2: Transaction History (Only in edit mode)
+        if self.is_edit_mode:
+            self.history_tab = QWidget()
+            self.setup_history_tab()
+            self.tabs.addTab(self.history_tab, "Transaction History")
+            
+    def setup_details_tab(self):
+        """Setup the item details form."""
+        layout = QVBoxLayout(self.details_tab)
         
         # Form layout
         form = QFormLayout()
@@ -52,7 +75,7 @@ class ItemDialog(QDialog):
         self.sku_input = QLineEdit()
         self.sku_input.setPlaceholderText("e.g., BEAN001")
         if self.is_edit_mode:
-            self.sku_input.setReadOnly(True)  # SKU cannot be changed
+            self.sku_input.setReadOnly(True)
         form.addRow("SKU*:", self.sku_input)
         
         # Name
@@ -65,8 +88,6 @@ class ItemDialog(QDialog):
         self.load_categories()
         form.addRow("Category:", self.category_combo)
         
-        # Unit of Measure removed
-        
         # Reorder Threshold
         self.threshold_spin = QSpinBox()
         self.threshold_spin.setRange(0, 10000)
@@ -75,16 +96,140 @@ class ItemDialog(QDialog):
         form.addRow("Reorder Threshold:", self.threshold_spin)
         
         layout.addLayout(form)
+        layout.addStretch()
         
-        # Buttons
+        # Buttons (Moved to bottom of main layout, or keep here? 
+        # Better to have main action buttons at bottom of dialog, but history tab might not need save)
+        # Let's keep Save/Cancel at the bottom of the DIALOG, outside tabs.
+
+    def setup_history_tab(self):
+        """Setup transaction history table."""
+        layout = QVBoxLayout(self.history_tab)
+        
+        # Table
+        self.tx_table = QTableWidget()
+        self.tx_table.setColumnCount(6)
+        self.tx_table.setHorizontalHeaderLabels([
+            "Date", "Type", "Change", "Reference", "Notes", "Void Info"
+        ])
+        self.tx_table.horizontalHeader().setSectionResizeMode(4, QHeaderView.ResizeMode.Stretch)
+        self.tx_table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
+        self.tx_table.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
+        
+        layout.addWidget(self.tx_table)
+        
+        # Void Button
+        btn_layout = QHBoxLayout()
+        btn_layout.addStretch()
+        
+        self.void_btn = QPushButton("Void Selected Transaction")
+        self.void_btn.setStyleSheet("background-color: #dc3545; color: white; font-weight: bold;")
+        self.void_btn.clicked.connect(self.void_transaction)
+        btn_layout.addWidget(self.void_btn)
+        
+        layout.addLayout(btn_layout)
+        
+        self.load_transactions()
+
+    def load_transactions(self):
+        """Load transactions for this item."""
+        if not self.item:
+            return
+            
+        transactions = self.service.get_transactions_by_item(self.item.id)
+        # Sort by date desc
+        transactions.sort(key=lambda x: x.transaction_date, reverse=True)
+        
+        self.tx_table.setRowCount(len(transactions))
+        
+        for row, tx in enumerate(transactions):
+            # Date
+            date_str = tx.transaction_date.strftime("%Y-%m-%d %H:%M") if tx.transaction_date else ""
+            self.tx_table.setItem(row, 0, QTableWidgetItem(date_str))
+            
+            # Type
+            type_str = tx.transaction_type.value
+            if tx.transaction_type == TransactionType.CORRECTION:
+                type_str = "CORRECTION"
+            self.tx_table.setItem(row, 1, QTableWidgetItem(type_str))
+            
+            # Quantity Change
+            qty_item = QTableWidgetItem(f"{tx.quantity_change:+.1f}")
+            if tx.quantity_change > 0:
+                qty_item.setForeground(QColor("green"))
+            elif tx.quantity_change < 0:
+                qty_item.setForeground(QColor("red"))
+            self.tx_table.setItem(row, 2, qty_item)
+            
+            # Reference / Reason
+            ref = tx.reason_code or tx.supplier or tx.donor or ""
+            if tx.ref_transaction_id:
+                ref += f" (Ref: #{tx.ref_transaction_id})"
+            self.tx_table.setItem(row, 3, QTableWidgetItem(str(ref)))
+            
+            # Notes
+            self.tx_table.setItem(row, 4, QTableWidgetItem(tx.notes or ""))
+            
+            # Void Info
+            void_status = "VOIDED" if tx.is_voided else ""
+            status_item = QTableWidgetItem(void_status)
+            if tx.is_voided:
+                status_item.setForeground(QColor("red"))
+                status_item.setFont(QFont(self.font().family(), -1, QFont.Weight.Bold))
+                
+                # Strikeout entire row appearance (simulated)
+                for col in range(5):
+                    font = self.tx_table.item(row, col).font()
+                    font.setStrikeOut(True)
+                    self.tx_table.item(row, col).setFont(font)
+                    self.tx_table.item(row, col).setForeground(QColor("gray"))
+                    
+            self.tx_table.setItem(row, 5, status_item)
+            
+            # Store ID
+            self.tx_table.item(row, 0).setData(Qt.ItemDataRole.UserRole, tx.id)
+
+    def void_transaction(self):
+        """Void the selected transaction."""
+        row = self.tx_table.currentRow()
+        if row < 0:
+            QMessageBox.warning(self, "Selection Required", "Please select a transaction to void.")
+            return
+            
+        tx_id = self.tx_table.item(row, 0).data(Qt.ItemDataRole.UserRole)
+        
+        # Check if already voided (visually)
+        status_text = self.tx_table.item(row, 5).text()
+        if status_text == "VOIDED":
+            QMessageBox.warning(self, "Invalid Action", "This transaction is already voided.")
+            return
+            
+        # Confirm
+        from ui.void_dialog import VoidDialog
+        dialog = VoidDialog(self, tx_id)
+        if dialog.exec():
+            reason = dialog.get_reason()
+            try:
+                self.service.void_transaction(tx_id, reason)
+                QMessageBox.information(self, "Success", "Transaction voided successfully.")
+                self.load_transactions() # Reload table
+                # Also need to update parent (list view) since quantity changed
+                # The accept() method will likely handle reload if we close, but we are staying open.
+            except ValueError as e:
+                QMessageBox.critical(self, "Error", str(e))
+            except Exception as e:
+                QMessageBox.critical(self, "Error", f"An unexpected error occurred: {e}")
+
+        
+        # Buttons Setup (Common)
         button_layout = QHBoxLayout()
         button_layout.addStretch()
         
-        cancel_btn = QPushButton("Cancel")
+        cancel_btn = QPushButton("Close" if self.is_edit_mode else "Cancel")
         cancel_btn.clicked.connect(self.reject)
         button_layout.addWidget(cancel_btn)
         
-        save_btn = QPushButton("Save")
+        save_btn = QPushButton("Save Item")
         save_btn.setDefault(True)
         save_btn.clicked.connect(self.save_item)
         save_btn.setStyleSheet("""
