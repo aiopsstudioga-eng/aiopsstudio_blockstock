@@ -301,7 +301,7 @@ class MainWindow(QMainWindow):
         
         # Distribution button
         dist_btn = self.create_intake_card(
-            "📤 Record Distribution",
+            "📤 Distribute",
             "Distribute items with reason codes:\n• Client Distribution\n• Spoilage/Expiration\n• Internal Use",
             "#e67e22",
             self.show_distribution

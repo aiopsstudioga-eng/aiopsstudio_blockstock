@@ -145,3 +145,137 @@ class ExcelReportGenerator:
             worksheet.column_dimensions['L'].width = 30
         
         return str(filepath)
+    
+    def generate_purchases_report(self, data: Dict) -> str:
+        """
+        Generate purchases report Excel file.
+        
+        Args:
+            data: Purchases report data from ReportingService
+            
+        Returns:
+            str: Path to generated Excel file
+        """
+        # Generate filename
+        today = date.today().isoformat()
+        filename = f"purchases_report_{today}.xlsx"
+        filepath = self.output_dir / filename
+        
+        # Create Excel writer
+        with pd.ExcelWriter(filepath, engine='openpyxl') as writer:
+            # Summary sheet
+            summary_data = {
+                'Metric': [
+                    'Total Purchases',
+                    'Total Quantity',
+                    'Total Cost',
+                    'Unique Suppliers',
+                    'Date Range'
+                ],
+                'Value': [
+                    data['total_purchases'],
+                    data['total_quantity'],
+                    f"${data['total_cost_dollars']:,.2f}",
+                    data['unique_suppliers'],
+                    f"{data['start_date'] or 'All'} to {data['end_date'] or 'All'}"
+                ]
+            }
+            
+            summary_df = pd.DataFrame(summary_data)
+            summary_df.to_excel(writer, sheet_name='Summary', index=False)
+            
+            # Purchases detail sheet
+            if data['purchases']:
+                purchases_data = []
+                for purchase in data['purchases']:
+                    purchases_data.append({
+                        'Date': purchase['date'][:10],
+                        'Item': purchase['item_name'],
+                        'SKU': purchase['sku'],
+                        'Category': purchase['category'],
+                        'Quantity': purchase['quantity'],
+                        'Unit Cost': purchase['unit_cost_cents'] / 100.0,
+                        'Total Cost': purchase['total_cost_cents'] / 100.0,
+                        'Supplier': purchase['supplier'] or '',
+                        'Notes': purchase['notes'] or ''
+                    })
+                
+                purchases_df = pd.DataFrame(purchases_data)
+                purchases_df.to_excel(writer, sheet_name='Purchases', index=False)
+                
+                # Format columns
+                worksheet = writer.sheets['Purchases']
+                worksheet.column_dimensions['A'].width = 12
+                worksheet.column_dimensions['B'].width = 30
+                worksheet.column_dimensions['C'].width = 15
+                worksheet.column_dimensions['D'].width = 20
+                worksheet.column_dimensions['E'].width = 12
+                worksheet.column_dimensions['F'].width = 12
+                worksheet.column_dimensions['G'].width = 12
+                worksheet.column_dimensions['H'].width = 25
+                worksheet.column_dimensions['I'].width = 40
+        
+        return str(filepath)
+    
+    def generate_suppliers_report(self, data: Dict) -> str:
+        """
+        Generate suppliers report Excel file.
+        
+        Args:
+            data: Suppliers report data from ReportingService
+            
+        Returns:
+            str: Path to generated Excel file
+        """
+        # Generate filename
+        today = date.today().isoformat()
+        filename = f"suppliers_report_{today}.xlsx"
+        filepath = self.output_dir / filename
+        
+        # Create Excel writer
+        with pd.ExcelWriter(filepath, engine='openpyxl') as writer:
+            # Summary sheet
+            summary_data = {
+                'Metric': [
+                    'Total Suppliers',
+                    'Total Purchases',
+                    'Total Cost'
+                ],
+                'Value': [
+                    data['total_suppliers'],
+                    data['total_purchases'],
+                    f"${data['total_cost_dollars']:,.2f}"
+                ]
+            }
+            
+            summary_df = pd.DataFrame(summary_data)
+            summary_df.to_excel(writer, sheet_name='Summary', index=False)
+            
+            # Suppliers detail sheet
+            if data['suppliers']:
+                suppliers_data = []
+                for supplier in data['suppliers']:
+                    suppliers_data.append({
+                        'Supplier': supplier['supplier'],
+                        'Purchase Count': supplier['purchase_count'],
+                        'Total Quantity': supplier['total_quantity'],
+                        'Total Cost': supplier['total_cost_dollars'],
+                        'First Purchase': supplier['first_purchase'][:10] if supplier['first_purchase'] else '',
+                        'Last Purchase': supplier['last_purchase'][:10] if supplier['last_purchase'] else '',
+                        'Notes': supplier['notes']
+                    })
+                
+                suppliers_df = pd.DataFrame(suppliers_data)
+                suppliers_df.to_excel(writer, sheet_name='Suppliers', index=False)
+                
+                # Format columns
+                worksheet = writer.sheets['Suppliers']
+                worksheet.column_dimensions['A'].width = 25
+                worksheet.column_dimensions['B'].width = 15
+                worksheet.column_dimensions['C'].width = 15
+                worksheet.column_dimensions['D'].width = 15
+                worksheet.column_dimensions['E'].width = 15
+                worksheet.column_dimensions['F'].width = 15
+                worksheet.column_dimensions['G'].width = 50
+        
+        return str(filepath)

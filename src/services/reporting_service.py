@@ -450,3 +450,172 @@ class ReportingService:
         ]
         
         return stats
+    
+    # ========================================================================
+    # PURCHASES REPORT
+    # ========================================================================
+    
+    def get_purchases_report_data(
+        self,
+        start_date: Optional[date] = None,
+        end_date: Optional[date] = None
+    ) -> Dict:
+        """
+        Get purchases report data.
+        
+        Args:
+            start_date: Start date (optional)
+            end_date: End date (optional)
+            
+        Returns:
+            Dict with purchases data
+        """
+        conn = self.db_manager.get_connection()
+        cursor = conn.cursor()
+        
+        # Get purchases
+        query = """
+            SELECT 
+                ii.name,
+                ii.sku,
+                ic.name as category_name,
+                it.transaction_date,
+                it.quantity_change,
+                it.unit_cost_cents,
+                it.supplier,
+                it.notes
+            FROM inventory_transactions it
+            JOIN inventory_items ii ON it.item_id = ii.id
+            LEFT JOIN item_categories ic ON ii.category_id = ic.id
+            WHERE it.transaction_type = 'PURCHASE'
+        """
+        
+        params = []
+        
+        if start_date:
+            query += " AND DATE(it.transaction_date) >= ?"
+            params.append(start_date.isoformat())
+        
+        if end_date:
+            query += " AND DATE(it.transaction_date) <= ?"
+            params.append(end_date.isoformat())
+        
+        query += " ORDER BY it.transaction_date DESC"
+        
+        cursor.execute(query, params)
+        rows = cursor.fetchall()
+        
+        # Calculate totals
+        total_purchases = len(rows)
+        total_quantity = 0
+        total_cost_cents = 0
+        suppliers_set = set()
+        
+        purchases = []
+        
+        for row in rows:
+            qty = row['quantity_change']
+            unit_cost = row['unit_cost_cents']
+            total_item_cost = int(qty * unit_cost)
+            
+            total_quantity += qty
+            total_cost_cents += total_item_cost
+            
+            if row['supplier']:
+                suppliers_set.add(row['supplier'])
+            
+            purchases.append({
+                'item_name': row['name'],
+                'sku': row['sku'],
+                'category': row['category_name'] or 'Uncategorized',
+                'date': row['transaction_date'],
+                'quantity': qty,
+                'unit_cost_cents': unit_cost,
+                'total_cost_cents': total_item_cost,
+                'supplier': row['supplier'],
+                'notes': row['notes']
+            })
+        
+        return {
+            'start_date': start_date,
+            'end_date': end_date,
+            'total_purchases': total_purchases,
+            'total_quantity': total_quantity,
+            'total_cost_cents': total_cost_cents,
+            'total_cost_dollars': total_cost_cents / 100.0,
+            'unique_suppliers': len(suppliers_set),
+            'purchases': purchases
+        }
+    
+    # ========================================================================
+    # SUPPLIERS REPORT
+    # ========================================================================
+    
+    def get_suppliers_report_data(self) -> Dict:
+        """
+        Get suppliers report data.
+        
+        Returns:
+            Dict with suppliers data including aggregated purchases and notes
+        """
+        conn = self.db_manager.get_connection()
+        cursor = conn.cursor()
+        
+        # Get all suppliers with aggregated data
+        cursor.execute("""
+            SELECT 
+                it.supplier,
+                COUNT(*) as purchase_count,
+                SUM(it.quantity_change) as total_quantity,
+                SUM(it.quantity_change * it.unit_cost_cents) as total_cost_cents,
+                MIN(it.transaction_date) as first_purchase,
+                MAX(it.transaction_date) as last_purchase,
+                GROUP_CONCAT(it.notes, ' | ') as all_notes
+            FROM inventory_transactions it
+            WHERE it.transaction_type = 'PURCHASE'
+            AND it.supplier IS NOT NULL
+            AND it.supplier != ''
+            GROUP BY it.supplier
+            ORDER BY total_cost_cents DESC
+        """)
+        
+        rows = cursor.fetchall()
+        
+        suppliers = []
+        total_suppliers = len(rows)
+        grand_total_purchases = 0
+        grand_total_cost_cents = 0
+        
+        for row in rows:
+            total_cost = row['total_cost_cents'] or 0
+            grand_total_purchases += row['purchase_count']
+            grand_total_cost_cents += total_cost
+            
+            # Clean up notes - remove None values and duplicates
+            notes_str = row['all_notes'] or ''
+            if notes_str:
+                # Split by separator, remove empty/None, and keep unique
+                notes_list = [n.strip() for n in notes_str.split('|') if n and n.strip() and n.strip().lower() != 'none']
+                unique_notes = list(dict.fromkeys(notes_list))  # Preserve order while removing duplicates
+                cleaned_notes = ' | '.join(unique_notes) if unique_notes else ''
+            else:
+                cleaned_notes = ''
+            
+            suppliers.append({
+                'supplier': row['supplier'],
+                'purchase_count': row['purchase_count'],
+                'total_quantity': row['total_quantity'],
+                'total_cost_cents': total_cost,
+                'total_cost_dollars': total_cost / 100.0,
+                'first_purchase': row['first_purchase'],
+                'last_purchase': row['last_purchase'],
+                'notes': cleaned_notes
+            })
+        
+        return {
+            'total_suppliers': total_suppliers,
+            'total_purchases': grand_total_purchases,
+            'total_cost_cents': grand_total_cost_cents,
+            'total_cost_dollars': grand_total_cost_cents / 100.0,
+            'suppliers': suppliers
+        }

@@ -102,6 +102,29 @@ class ReportsPage(QWidget):
         
         layout.addLayout(cards_layout)
         
+        layout.addSpacing(20)
+        
+        # Second row of report cards
+        cards_layout_2 = QHBoxLayout()
+        cards_layout_2.setSpacing(20)
+        
+        # Purchases Report Card
+        purchases_card = self.create_purchases_report_card()
+        cards_layout_2.addWidget(purchases_card)
+        
+        # Suppliers Report Card
+        suppliers_card = self.create_report_card(
+            "🏢 Suppliers Report",
+            "Supplier purchases \u0026 notes\nExcel Export",
+            "#16a085",
+            self.generate_suppliers_report
+        )
+        cards_layout_2.addWidget(suppliers_card)
+        
+        cards_layout_2.addStretch()
+        
+        layout.addLayout(cards_layout_2)
+        
         layout.addSpacing(30)
         
         # Transaction History Export
@@ -179,12 +202,88 @@ class ReportsPage(QWidget):
         
         return card
     
+    def create_purchases_report_card(self) -> QWidget:
+        """Create purchases report card with dual buttons."""
+        card = QWidget()
+        card.setFixedSize(250, 200)
+        color = "#9b59b6"
+        card.setStyleSheet(f"""
+            QWidget {{
+                background-color: white;
+                border: 2px solid {color};
+                border-radius: 10px;
+            }}
+        """)
+        
+        card_layout = QVBoxLayout(card)
+        card_layout.setContentsMargins(20, 20, 20, 20)
+        
+        # Title
+        title_label = QLabel("📦 Purchases Report")
+        title_label.setStyleSheet(f"font-size: 16pt; font-weight: bold; color: {color};")
+        title_label.setWordWrap(True)
+        card_layout.addWidget(title_label)
+        
+        card_layout.addSpacing(10)
+        
+        # Description
+        desc_label = QLabel("Purchase transactions\nExcel Export")
+        desc_label.setStyleSheet("font-size: 10pt; color: #7f8c8d;")
+        desc_label.setWordWrap(True)
+        card_layout.addWidget(desc_label)
+        
+        card_layout.addStretch()
+        
+        # Buttons layout
+        buttons_layout = QHBoxLayout()
+        buttons_layout.setSpacing(5)
+        
+        # Generate button
+        gen_btn = QPushButton("Generate")
+        gen_btn.setStyleSheet(f"""
+            QPushButton {{
+                background-color: {color};
+                color: white;
+                padding: 8px 12px;
+                border-radius: 4px;
+                font-weight: bold;
+            }}
+            QPushButton:hover {{
+                background-color: #8e44ad;
+            }}
+        """)
+        gen_btn.clicked.connect(self.generate_purchases_report)
+        buttons_layout.addWidget(gen_btn)
+        
+        # Today button
+        today_btn = QPushButton("Today")
+        today_btn.setStyleSheet(f"""
+            QPushButton {{
+                background-color: {color};
+                color: white;
+                padding: 8px 12px;
+                border-radius: 4px;
+                font-weight: bold;
+            }}
+            QPushButton:hover {{
+                background-color: #8e44ad;
+            }}
+        """)
+        today_btn.clicked.connect(self.generate_purchases_report_today)
+        buttons_layout.addWidget(today_btn)
+        
+        card_layout.addLayout(buttons_layout)
+        
+        return card
+    
     def darken_color(self, hex_color: str) -> str:
         """Darken a hex color."""
         color_map = {
             "#3498db": "#2980b9",
             "#27ae60": "#229954",
             "#e67e22": "#d35400",
+            "#9b59b6": "#8e44ad",
+            "#16a085": "#138d75",
         }
         return color_map.get(hex_color, hex_color)
     
@@ -343,3 +442,115 @@ class ReportsPage(QWidget):
                 
         except Exception as e:
             QMessageBox.critical(self, "Error", f"Failed to export transactions: {e}")
+    
+    def generate_purchases_report(self):
+        """Generate purchases report Excel."""
+        try:
+            start_date, end_date = self.get_date_range()
+            
+            # Get data
+            data = self.reporting_service.get_purchases_report_data(start_date, end_date)
+            
+            if data['total_purchases'] == 0:
+                QMessageBox.information(
+                    self,
+                    "No Data",
+                    "No purchases found in the selected date range."
+                )
+                return
+            
+            # Generate Excel
+            filepath = self.excel_generator.generate_purchases_report(data)
+            
+            # Ask to open
+            reply = QMessageBox.question(
+                self,
+                "Report Generated",
+                f"Purchases report generated successfully!\n\n"
+                f"Total Purchases: {data['total_purchases']}\n"
+                f"Total Cost: ${data['total_cost_dollars']:,.2f}\n"
+                f"Unique Suppliers: {data['unique_suppliers']}\n\n"
+                f"Saved to: {filepath}\n\n"
+                f"Would you like to open the report?",
+                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
+            )
+            
+            if reply == QMessageBox.StandardButton.Yes:
+                QDesktopServices.openUrl(QUrl.fromLocalFile(filepath))
+                
+        except Exception as e:
+            QMessageBox.critical(self, "Error", f"Failed to generate report: {e}")
+    
+    def generate_purchases_report_today(self):
+        """Generate purchases report for today only."""
+        try:
+            today = date.today()
+            
+            # Get data for today
+            data = self.reporting_service.get_purchases_report_data(today, today)
+            
+            if data['total_purchases'] == 0:
+                QMessageBox.information(
+                    self,
+                    "No Data",
+                    "No purchases found for today."
+                )
+                return
+            
+            # Generate Excel
+            filepath = self.excel_generator.generate_purchases_report(data)
+            
+            # Ask to open
+            reply = QMessageBox.question(
+                self,
+                "Report Generated",
+                f"Today's purchases report generated successfully!\n\n"
+                f"Total Purchases: {data['total_purchases']}\n"
+                f"Total Cost: ${data['total_cost_dollars']:,.2f}\n"
+                f"Unique Suppliers: {data['unique_suppliers']}\n\n"
+                f"Saved to: {filepath}\n\n"
+                f"Would you like to open the report?",
+                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
+            )
+            
+            if reply == QMessageBox.StandardButton.Yes:
+                QDesktopServices.openUrl(QUrl.fromLocalFile(filepath))
+                
+        except Exception as e:
+            QMessageBox.critical(self, "Error", f"Failed to generate report: {e}")
+    
+    def generate_suppliers_report(self):
+        """Generate suppliers report Excel."""
+        try:
+            # Get data
+            data = self.reporting_service.get_suppliers_report_data()
+            
+            if data['total_suppliers'] == 0:
+                QMessageBox.information(
+                    self,
+                    "No Data",
+                    "No suppliers found. Make sure you have purchase transactions with supplier names."
+                )
+                return
+            
+            # Generate Excel
+            filepath = self.excel_generator.generate_suppliers_report(data)
+            
+            # Ask to open
+            reply = QMessageBox.question(
+                self,
+                "Report Generated",
+                f"Suppliers report generated successfully!\n\n"
+                f"Total Suppliers: {data['total_suppliers']}\n"
+                f"Total Purchases: {data['total_purchases']}\n"
+                f"Total Cost: ${data['total_cost_dollars']:,.2f}\n\n"
+                f"Saved to: {filepath}\n\n"
+                f"Would you like to open the report?",
+                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
+            )
+            
+            if reply == QMessageBox.StandardButton.Yes:
+                QDesktopServices.openUrl(QUrl.fromLocalFile(filepath))
+                
+        except Exception as e:
+            QMessageBox.critical(self, "Error", f"Failed to generate report: {e}")
