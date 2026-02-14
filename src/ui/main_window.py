@@ -142,6 +142,14 @@ class MainWindow(QMainWindow):
         stock_action.triggered.connect(self.show_stock_status)
         reports_menu.addAction(stock_action)
         
+        purchases_action = QAction("&Purchases Report", self)
+        purchases_action.triggered.connect(self.show_purchases_report)
+        reports_menu.addAction(purchases_action)
+        
+        suppliers_action = QAction("S&uppliers Report", self)
+        suppliers_action.triggered.connect(self.show_suppliers_report)
+        reports_menu.addAction(suppliers_action)
+        
         # Help menu
         help_menu = menubar.addMenu("&Help")
         
@@ -451,6 +459,14 @@ class MainWindow(QMainWindow):
     
     def show_stock_status(self):
         """Show stock status report page."""
+        self.content_stack.setCurrentIndex(4)  # Reports page
+    
+    def show_purchases_report(self):
+        """Show purchases report page."""
+        self.content_stack.setCurrentIndex(4)  # Reports page
+    
+    def show_suppliers_report(self):
+        """Show suppliers report page."""
         self.content_stack.setCurrentIndex(4)  # Reports page
     
     def show_about(self):
