@@ -29,6 +29,32 @@ Each entry follows this structure:
 
 ## Development Entries
 
+### 2026-02-14 | Code Review & Critical Bug Fixes
+
+**Phase:** Quality Assurance / Bug Fixes
+**Focus:** Code Review Findings and Critical Fixes
+
+#### Accomplishments
+- 🔍 **Conducted Comprehensive Code Review**: Reviewed all core files (main.py, connection.py, inventory_service.py, item.py, transaction.py, schema.sql, seed_data.py) as Senior Python Developer
+- 🐛 **Fixed Critical UI Bug**: Corrected tooltip assignment in `main.py` where Production Mode button was incorrectly getting Training Mode tooltip
+- 🗄️ **Fixed Schema Constraint**: Updated `schema.sql` CHECK constraint to properly validate CORRECTION transactions (`quantity_change != 0`)
+- ⚡ **Added Performance Index**: Added `idx_trans_voided` index on `is_voided` column for faster void transaction queries
+- ✅ **Verified Existing Code**: Confirmed seed_data.py already correctly handles zero quantity items (no fix needed)
+
+#### Technical Decisions
+- **Schema Validation**: CORRECTION transactions can be positive OR negative, so constraint needed update to `quantity_change != 0`
+- **Index Strategy**: Added index on `is_voided` for better query performance on void filtering
+
+#### Issues Identified (Not Fixed - Low Priority)
+- Float precision for quantities (would require significant refactoring to use decimal.Decimal)
+- Hardcoded "system" user for void transactions (needs user authentication)
+- Print statements instead of proper logging module
+
+#### Next Steps
+- Continue Phase 3 development when ready
+
+---
+
 ### 2026-02-13 | Void Workflow & Stability Hardening
 
 **Phase:** Phase 3 Preparation / Quality Assurance
@@ -500,5 +526,5 @@ def get_platform():
 
 ---
 
-**Last Updated:** 2026-01-31  
-**Next Review:** 2026-02-07 (Weekly)
+**Last Updated:** 2026-02-14  
+**Next Review:** 2026-02-21 (Weekly)

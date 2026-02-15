@@ -73,7 +73,7 @@ CREATE TABLE IF NOT EXISTS inventory_transactions (
     CHECK (
         (transaction_type = 'DISTRIBUTION' AND quantity_change < 0) OR
         (transaction_type IN ('PURCHASE', 'DONATION') AND quantity_change > 0) OR
-        (transaction_type = 'CORRECTION') -- Corrections can be pos or neg
+        (transaction_type = 'CORRECTION' AND quantity_change != 0)
     )
 );
 
@@ -86,6 +86,7 @@ CREATE INDEX IF NOT EXISTS idx_items_active ON inventory_items(is_active);
 CREATE INDEX IF NOT EXISTS idx_trans_item ON inventory_transactions(item_id);
 CREATE INDEX IF NOT EXISTS idx_trans_date ON inventory_transactions(transaction_date);
 CREATE INDEX IF NOT EXISTS idx_trans_type ON inventory_transactions(transaction_type);
+CREATE INDEX IF NOT EXISTS idx_trans_voided ON inventory_transactions(is_voided);
 
 -- ============================================================================
 -- TRIGGERS for Automatic Timestamp Updates
