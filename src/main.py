@@ -155,9 +155,26 @@ def setup_database(appdata_dir: str, db_name: str) -> str:
     db_path = os.path.join(appdata_dir, db_name)
     logger.info(f"Using database at: {db_path}")
     
-    is_new_db = not os.path.exists(db_path)
+    # Check if database exists AND is initialized
+    needs_init = False
     
-    if is_new_db:
+    if not os.path.exists(db_path):
+        needs_init = True
+    else:
+        # File exists, check if tables exist
+        try:
+            import sqlite3
+            with sqlite3.connect(db_path) as conn:
+                cursor = conn.cursor()
+                cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='inventory_items'")
+                if not cursor.fetchone():
+                    logger.warning("Database file exists but 'inventory_items' table is missing. Re-initializing.")
+                    needs_init = True
+        except Exception as e:
+            logger.error(f"Error checking database integrity: {e}")
+            needs_init = True
+    
+    if needs_init:
         logger.info(f"Initializing {db_name}...")
         schema_path = get_schema_path()
         try:
