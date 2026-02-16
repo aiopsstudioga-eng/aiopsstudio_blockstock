@@ -237,6 +237,7 @@ class MainWindow(QMainWindow):
         
         return sidebar
     
+    def add_pages(self):
         """Add content pages to stack."""
         # Dashboard (lazy loaded)
         from ui.dashboard_page import DashboardPage
@@ -487,7 +488,7 @@ class MainWindow(QMainWindow):
             self,
             "About AI OPS Studio",
             "<h2>AI OPS Studio</h2>"
-            "<p>Version 0.1.0-alpha</p>"
+            "<p>Version 0.1.0-beta</p>"
             "<p>Professional inventory management for food pantries</p>"
             "<p>© 2026 AI Ops Studio LLC </p>"
         )

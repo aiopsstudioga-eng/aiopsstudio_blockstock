@@ -23,7 +23,7 @@ This creates `dist\AIOpsStudio\AIOpsStudio.exe` and all dependencies.
 2. Click **File → Open**
 3. Navigate to and open `AIOpsStudio.iss`
 4. Click **Build → Compile** (or press F9)
-5. The installer will be created in `packaging\output\AIOpsStudio-Setup-0.1.0.exe`
+5. The installer will be created in `packaging\output\AIOpsStudio-Setup-0.1.0-beta.exe`
 
 ### Method 2: Command Line (Automated)
 ```powershell
@@ -45,11 +45,11 @@ The created installer includes:
 ## Distribution
 
 After compilation, distribute:
-- **File**: `packaging\output\AIOpsStudio-Setup-0.1.0.exe`
+- **File**: `packaging\output\AIOpsStudio-Setup-0.1.0-beta.exe`
 - **Size**: Approximately 30-50 MB (contains full application)
 
 Users simply:
-1. Download `AIOpsStudio-Setup-0.1.0.exe`
+1. Download `AIOpsStudio-Setup-0.1.0-beta.exe`
 2. Double-click to install
 3. Follow the installation wizard
 4. Launch from Start Menu or Desktop
@@ -57,7 +57,7 @@ Users simply:
 ## Updating the Version
 
 When releasing a new version:
-1. Update version in `AIOpsStudio.iss` (line: `AppVersion=0.1.0`)
+1. Update version in `AIOpsStudio.iss` (line: `AppVersion=0.1.0-beta`)
 2. Update `OutputBaseFilename` to match version
 3. Rebuild the application: `.\build_windows.ps1`
 4. Recompile the installer

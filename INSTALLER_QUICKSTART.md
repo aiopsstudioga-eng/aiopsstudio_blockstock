@@ -26,10 +26,10 @@ This creates `dist\AIOpsStudio\AIOpsStudio.exe`
 
 ## 4. Find Your Installer
 The installer will be at:
-`packaging\output\AIOpsStudio-Setup-0.1.0.exe`
+`packaging\output\AIOpsStudio-Setup-0.1.0-beta.exe`
 
 ## That's It!
-Distribute `AIOpsStudio-Setup-0.1.0.exe` to users. They just double-click to install.
+Distribute `AIOpsStudio-Setup-0.1.0-beta.exe` to users. They just double-click to install.
 
 ---
 

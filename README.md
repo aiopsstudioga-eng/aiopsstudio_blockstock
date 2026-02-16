@@ -103,5 +103,5 @@ For issues and questions, please open an issue on GitHub.
 ---
 
 **Status:** Active Development - Phase 1 (MVP)  
-**Version:** 0.1.0-alpha  
+**Version:** 0.1.0-beta  
 **Last Updated:** 2026-01-31
