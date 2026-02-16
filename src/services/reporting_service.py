@@ -411,8 +411,10 @@ class ReportingService:
             WHERE is_active = 1
         """)
         row = cursor.fetchone()
-        stats['total_items_count'] = row['total_items']
-        stats['low_stock_count'] = row['low_stock']
+        
+        # Handle None results which occur when table is empty
+        stats['total_items_count'] = row['total_items'] or 0
+        stats['low_stock_count'] = row['low_stock'] or 0
         stats['total_inventory_value_dollars'] = (row['total_value_cents'] or 0) / 100.0
         
         # 2. Value by Category
@@ -428,7 +430,7 @@ class ReportingService:
             ORDER BY value_cents DESC
         """)
         stats['value_by_category'] = [
-            {'category': row['name'], 'value_dollars': row['value_cents'] / 100.0}
+            {'category': row['name'], 'value_dollars': (row['value_cents'] or 0) / 100.0}
             for row in cursor.fetchall()
         ]
         
@@ -445,7 +447,7 @@ class ReportingService:
             LIMIT 5
         """)
         stats['top_distributed_items'] = [
-            {'name': row['name'], 'quantity': row['total_distributed']}
+            {'name': row['name'], 'quantity': (row['total_distributed'] or 0)}
             for row in cursor.fetchall()
         ]
         
@@ -514,8 +516,8 @@ class ReportingService:
         purchases = []
         
         for row in rows:
-            qty = row['quantity_change']
-            unit_cost = row['unit_cost_cents']
+            qty = row['quantity_change'] or 0
+            unit_cost = row['unit_cost_cents'] or 0
             total_item_cost = int(qty * unit_cost)
             
             total_quantity += qty
@@ -604,7 +606,7 @@ class ReportingService:
             suppliers.append({
                 'supplier': row['supplier'],
                 'purchase_count': row['purchase_count'],
-                'total_quantity': row['total_quantity'],
+                'total_quantity': row['total_quantity'] or 0,
                 'total_cost_cents': total_cost,
                 'total_cost_dollars': total_cost / 100.0,
                 'first_purchase': row['first_purchase'],

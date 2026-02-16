@@ -55,6 +55,22 @@ class PDFReportGenerator:
             textColor=colors.HexColor('#34495e'),
             spaceAfter=12
         )
+
+        self.table_cell_style = ParagraphStyle(
+            'TableCell',
+            parent=self.styles['Normal'],
+            fontSize=9,
+            leading=11,
+            textColor=colors.whitesmoke
+        )
+
+        self.table_cell_style_black = ParagraphStyle(
+            'TableCellBlack',
+            parent=self.styles['Normal'],
+            fontSize=9,
+            leading=11,
+            textColor=colors.black
+        )
     
     def generate_financial_report(self, data: Dict) -> str:
         """
@@ -75,9 +91,9 @@ class PDFReportGenerator:
         doc = SimpleDocTemplate(
             str(filepath),
             pagesize=letter,
-            rightMargin=72,
-            leftMargin=72,
-            topMargin=72,
+            rightMargin=36,
+            leftMargin=36,
+            topMargin=36,
             bottomMargin=18
         )
         
@@ -133,21 +149,29 @@ class PDFReportGenerator:
             trans_data = [['Date', 'Item', 'Qty', 'Unit Cost', 'Total', 'Reason']]
             
             for dist in data['distributions']:
+                item_text = f"{dist['item_name']} ({dist['sku']})"
+                # Use Paragraph for wrapping
+                item_para = Paragraph(item_text, self.table_cell_style_black)
+                reason_para = Paragraph(dist['reason'], self.table_cell_style_black)
+
                 trans_data.append([
                     dist['date'][:10],  # Date only
-                    f"{dist['item_name']} ({dist['sku']})",
+                    item_para,
                     f"{dist['quantity']:.1f}",
                     f"${dist['unit_cost_cents'] / 100:.2f}",
                     f"${dist['total_cogs_cents'] / 100:.2f}",
-                    dist['reason']
+                    reason_para
                 ])
             
-            trans_table = Table(trans_data, colWidths=[1*inch, 2*inch, 0.7*inch, 1*inch, 1*inch, 1*inch])
+            # Adjusted widths to fit 7.5" (8.5 - 0.5 - 0.5)
+            # Old: [1, 2, 0.7, 1, 1, 1] = 6.7.   New target ~7.5
+            trans_table = Table(trans_data, colWidths=[1*inch, 2.5*inch, 0.7*inch, 1*inch, 1*inch, 1.3*inch])
             trans_table.setStyle(TableStyle([
                 ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#34495e')),
                 ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
                 ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
                 ('ALIGN', (2, 0), (4, -1), 'RIGHT'),
+                ('VALIGN', (0, 0), (-1, -1), 'TOP'), # Align top for wrapped text
                 ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
                 ('FONTSIZE', (0, 0), (-1, 0), 10),
                 ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
@@ -182,9 +206,9 @@ class PDFReportGenerator:
         doc = SimpleDocTemplate(
             str(filepath),
             pagesize=letter,
-            rightMargin=72,
-            leftMargin=72,
-            topMargin=72,
+            rightMargin=36,
+            leftMargin=36,
+            topMargin=36,
             bottomMargin=18
         )
         
@@ -209,16 +233,18 @@ class PDFReportGenerator:
         
         # Low stock items
         if data['items_below_threshold'] or data['items_zero_stock']:
-            heading = Paragraph("⚠️ Items Requiring Attention", self.heading_style)
+            heading = Paragraph("Items Requiring Attention", self.heading_style)
             story.append(heading)
             
             alert_data = [['SKU', 'Item', 'Qty', 'Threshold', 'Status']]
             
             # Zero stock items first (critical)
             for item in data['items_zero_stock']:
+                name_para = Paragraph(item['name'], self.table_cell_style_black)
+                sku_para = Paragraph(item['sku'], self.table_cell_style_black)
                 alert_data.append([
-                    item['sku'],
-                    item['name'],
+                    sku_para,
+                    name_para,
                     f"{item['quantity']:.1f}",
                     f"{item['threshold']}",
                     'OUT OF STOCK'
@@ -226,19 +252,24 @@ class PDFReportGenerator:
             
             # Below threshold items
             for item in data['items_below_threshold']:
+                name_para = Paragraph(item['name'], self.table_cell_style_black)
+                sku_para = Paragraph(item['sku'], self.table_cell_style_black)
                 alert_data.append([
-                    item['sku'],
-                    item['name'],
+                    sku_para,
+                    name_para,
                     f"{item['quantity']:.1f}",
                     f"{item['threshold']}",
                     'LOW'
                 ])
             
-            alert_table = Table(alert_data, colWidths=[1*inch, 2.5*inch, 1.2*inch, 1*inch, 1.3*inch])
+            # Adjusted widths to fit 7.5" (Total available width)
+            # SKU: 1.3", Item: 3.0", Qty: 1.0", Threshold: 1.0", Status: 1.2"
+            alert_table = Table(alert_data, colWidths=[1.3*inch, 3.0*inch, 1*inch, 1*inch, 1.2*inch])
             alert_table.setStyle(TableStyle([
                 ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#e74c3c')),
                 ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
                 ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+                ('VALIGN', (0, 0), (-1, -1), 'TOP'), # Align top
                 ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
                 ('FONTSIZE', (0, 0), (-1, 0), 10),
                 ('BOTTOMPADDING', (0, 0), (-1, 0), 12),

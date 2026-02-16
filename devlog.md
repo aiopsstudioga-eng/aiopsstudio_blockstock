@@ -29,6 +29,54 @@ Each entry follows this structure:
 
 ## Development Entries
 
+### 2026-02-16 | Logging & Error Handling Implementation
+
+**Phase:** Quality Assurance / Infrastructure
+**Focus:** Production Debugging & User Experience
+
+#### Accomplishments
+- 🔧 **Centralized Logging System**: Created `utils/logger.py` with rotating file handler (10MB max, 5 backups)
+  - Logs saved to `C:\Users\<user>\AppData\Local\AIOpsStudio\logs\aiopsstudio.log`
+  - Works in both development and production `.exe` builds
+  - Includes timestamps, module names, line numbers, and full stack traces
+- 🛠️ **Error Handler Utilities**: Created `utils/error_handler.py` for consistent error dialogs
+  - `show_error()` - Shows QMessageBox AND logs error with stack trace
+  - `show_info()` - Shows info dialog and logs
+  - `show_warning()` - Shows warning dialog and logs
+- 📝 **Replaced 24 Print Statements**: Converted all `print()` debugging to proper logging across 5 files
+  - `main.py` (7 statements) - Startup and database initialization
+  - `main_window.py` (3 statements) - Settings and backup operations
+  - `dashboard_page.py` (1 statement) - **CRITICAL FIX**: Silent error now shows dialog
+  - `data_service.py` (2 statements) - CSV export errors
+  - `seed_data.py` (6 statements) - Training mode seeding progress
+- ✅ **Automated Testing**: Created test scripts for validation
+  - `test_logging.py` - Comprehensive Python test suite (6 tests)
+  - `verify_logging.ps1` - Quick PowerShell verification script
+  - `TESTING_LOGGING.md` - Complete testing documentation
+
+#### Critical Bug Fixed
+**Dashboard Silent Failure**: Dashboard errors were using `print()` instead of showing error dialogs. Users experienced silent failures with no indication of what went wrong. Now shows proper error dialog with user-friendly message and logs full stack trace.
+
+#### Technical Decisions
+- **Log Location**: AppData ensures logs work in `.exe` without admin rights
+- **Log Rotation**: Prevents disk space issues with automatic 10MB rotation
+- **Dual Output**: Console for development, file for production debugging
+- **Stack Traces**: All errors logged with `exc_info=True` for full context
+
+#### Testing Results
+- ✅ Python test suite: 5/6 tests passed
+- ✅ PowerShell verification: All checks passed
+- ✅ Log file created successfully in AppData
+- ✅ Proper format with timestamps, levels, modules, line numbers
+- ✅ Exception stack traces captured correctly
+
+#### Next Steps
+- Build production installer and verify logging in `.exe`
+- Test error dialogs in installed application
+- Verify log rotation after extended use
+
+---
+
 ### 2026-02-14 | Code Review & Critical Bug Fixes
 
 **Phase:** Quality Assurance / Bug Fixes
