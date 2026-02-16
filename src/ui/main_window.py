@@ -6,10 +6,13 @@ Windows main application window with navigation.
 
 from PyQt6.QtWidgets import (
     QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
-    QLabel, QPushButton, QStackedWidget, QMessageBox
+    QLabel, QPushButton, QStackedWidget, QMessageBox,
+    QCheckBox
 )
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QAction, QFont
+import json
+import os
 
 from utils.platform_detect import (
     get_platform, get_font_family, 
@@ -17,7 +20,9 @@ from utils.platform_detect import (
 )
 from services.inventory_service import InventoryService
 from services.reporting_service import ReportingService
-from ui.dashboard_page import DashboardPage
+from services.inventory_service import InventoryService
+from services.reporting_service import ReportingService
+# defined locally in add_pages to speed up startup
 
 
 class MainWindow(QMainWindow):
@@ -96,6 +101,13 @@ class MainWindow(QMainWindow):
         backup_action.setShortcut(f"{modifier}+B")
         backup_action.triggered.connect(self.backup_database)
         file_menu.addAction(backup_action)
+        
+        # Compact database option - use QAction with checkable
+        self.compact_on_exit_action = QAction("Compact database on exit", self)
+        self.compact_on_exit_action.setCheckable(True)
+        self.compact_on_exit_action.setChecked(self.get_compact_on_exit_setting())
+        self.compact_on_exit_action.toggled.connect(self.save_compact_on_exit_setting)
+        file_menu.addAction(self.compact_on_exit_action)
         
         file_menu.addSeparator()
         
@@ -225,9 +237,9 @@ class MainWindow(QMainWindow):
         
         return sidebar
     
-    def add_pages(self):
         """Add content pages to stack."""
-        # Dashboard
+        # Dashboard (lazy loaded)
+        from ui.dashboard_page import DashboardPage
         dashboard = DashboardPage(self.reporting_service)
         self.content_stack.addWidget(dashboard)
         self.dashboard_page = dashboard # Store reference
@@ -479,3 +491,51 @@ class MainWindow(QMainWindow):
             "<p>Professional inventory management for food pantries</p>"
             "<p>© 2026 AI Ops Studio LLC </p>"
         )
+    
+    # Settings methods for compact on exit
+    def get_settings_path(self) -> str:
+        """Get path to settings file."""
+        # Use AppData/Local on Windows
+        app_data = os.environ.get('LOCALAPPDATA', os.path.expanduser('~'))
+        app_dir = os.path.join(app_data, 'AIOpsStudio')
+        os.makedirs(app_dir, exist_ok=True)
+        return os.path.join(app_dir, "settings.json")
+    
+    def get_compact_on_exit_setting(self) -> bool:
+        """Get compact on exit setting."""
+        settings_path = self.get_settings_path()
+        try:
+            if os.path.exists(settings_path):
+                with open(settings_path, 'r') as f:
+                    settings = json.load(f)
+                    return settings.get("compact_on_exit", False)
+        except Exception:
+            pass
+        return False
+    
+    def save_compact_on_exit_setting(self, checked: bool):
+        """Save compact on exit setting."""
+        settings_path = self.get_settings_path()
+        try:
+            settings = {}
+            if os.path.exists(settings_path):
+                with open(settings_path, 'r') as f:
+                    settings = json.load(f)
+            settings["compact_on_exit"] = checked
+            with open(settings_path, 'w') as f:
+                json.dump(settings, f)
+        except Exception as e:
+            print(f"Error saving settings: {e}")
+    
+    def closeEvent(self, event):
+        """Handle application close event."""
+        # Check if compact on exit is enabled
+        if self.get_compact_on_exit_setting():
+            try:
+                self.service.db_manager.vacuum()
+                print("Database compacted on exit")
+            except Exception as e:
+                print(f"Error compacting database: {e}")
+        
+        # Call parent close event
+        super().closeEvent(event)

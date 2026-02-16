@@ -9,11 +9,14 @@ from PyQt6.QtWidgets import (
 from PyQt6.QtCore import Qt, QTimer
 from PyQt6.QtGui import QColor, QFont
 
-import matplotlib
-matplotlib.use('QtAgg')
-from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg
-from matplotlib.figure import Figure
-import matplotlib.pyplot as plt
+from PyQt6.QtGui import QColor, QFont
+
+# Matplotlib imports moved to local scope for faster startup
+# import matplotlib
+# matplotlib.use('QtAgg')
+# from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg
+# from matplotlib.figure import Figure
+# import matplotlib.pyplot as plt
 
 from services.reporting_service import ReportingService
 
@@ -79,20 +82,34 @@ class DashboardPage(QWidget):
         
         layout.addLayout(kpi_layout)
         
+        layout.addLayout(kpi_layout)
+        
         # Charts (Bottom Row)
-        charts_layout = QHBoxLayout()
+        self.charts_layout = QHBoxLayout()
+        self._init_charts() # Lazy load charts
+        layout.addLayout(self.charts_layout)
+        
+    def _init_charts(self):
+        """Initialize charts with local imports."""
+        # Local import for performance
+        import matplotlib
+        matplotlib.use('QtAgg')
+        from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg
+        from matplotlib.figure import Figure
+        
+        # Store classes for later use in load_data
+        self.FigureCanvasQTAgg = FigureCanvasQTAgg
+        self.Figure = Figure
         
         # Value by Category Chart
         self.category_figure = Figure(figsize=(5, 4), dpi=100)
         self.category_canvas = FigureCanvasQTAgg(self.category_figure)
-        charts_layout.addWidget(self.category_canvas)
+        self.charts_layout.addWidget(self.category_canvas)
         
         # Top Distributed Items Chart
         self.distributed_figure = Figure(figsize=(5, 4), dpi=100)
         self.distributed_canvas = FigureCanvasQTAgg(self.distributed_figure)
-        charts_layout.addWidget(self.distributed_canvas)
-        
-        layout.addLayout(charts_layout)
+        self.charts_layout.addWidget(self.distributed_canvas)
         
     def load_data(self):
         """Load and display dashboard data."""
@@ -113,7 +130,13 @@ class DashboardPage(QWidget):
                 labels = [c['category'] for c in categories]
                 values = [c['value_dollars'] for c in categories]
                 
+            if categories:
+                labels = [c['category'] for c in categories]
+                values = [c['value_dollars'] for c in categories]
+                
                 # Pie chart with labels outside and connecting lines
+                # Import colormap locally
+                import matplotlib.pyplot as plt
                 colors = plt.cm.Set3.colors
                 
                 # Small explode for visual separation
@@ -179,6 +202,8 @@ class DashboardPage(QWidget):
                     ax2.set_ylim(0, max(quantities) * 1.2)
                 
                 # Rotate labels if they are long
+                # Import pyplot locally for setp
+                import matplotlib.pyplot as plt
                 plt.setp(ax2.get_xticklabels(), rotation=45, ha='right')
                 self.distributed_figure.subplots_adjust(bottom=0.25, top=0.85)
             else:

@@ -92,10 +92,18 @@ class PurchaseDialog(QDialog):
         self.total_label.setStyleSheet("font-size: 14pt; font-weight: bold; color: #3498db;")
         form.addRow("Total Cost:", self.total_label)
         
-        # Supplier
-        self.supplier_input = QLineEdit()
-        self.supplier_input.setPlaceholderText("e.g., ABC Foods")
-        form.addRow("Supplier:", self.supplier_input)
+        # Supplier dropdown
+        self.supplier_combo = QComboBox()
+        self.supplier_combo.addItems([
+            "Dollar Tree",
+            "Restaurant Depot", 
+            "Sam's Club",
+            "Walmart",
+            "Other"
+        ])
+        self.supplier_combo.setEditable(True)
+        self.supplier_combo.lineEdit().setPlaceholderText("Select or type supplier...")
+        form.addRow("Supplier:", self.supplier_combo)
         
         # Notes
         self.notes_input = QTextEdit()
@@ -164,7 +172,7 @@ class PurchaseDialog(QDialog):
         
         quantity = self.quantity_spin.value()
         unit_cost = self.unit_cost_spin.value()
-        supplier = self.supplier_input.text().strip() or None
+        supplier = self.supplier_combo.currentText().strip() or None
         notes = self.notes_input.toPlainText().strip() or None
         
         try:

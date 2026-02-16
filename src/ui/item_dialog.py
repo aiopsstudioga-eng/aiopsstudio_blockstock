@@ -135,11 +135,12 @@ class ItemDialog(QDialog):
         
         # Table
         self.tx_table = QTableWidget()
-        self.tx_table.setColumnCount(6)
+        self.tx_table.setColumnCount(8)
         self.tx_table.setHorizontalHeaderLabels([
-            "Date", "Type", "Change", "Reference", "Notes", "Void Info"
+            "Date", "Type", "Change", "Unit Cost", "Total Cost", "Reference", "Notes", "Void Info"
         ])
-        self.tx_table.horizontalHeader().setSectionResizeMode(4, QHeaderView.ResizeMode.Stretch)
+        self.tx_table.horizontalHeader().setSectionResizeMode(5, QHeaderView.ResizeMode.Stretch)
+        self.tx_table.horizontalHeader().setSectionResizeMode(6, QHeaderView.ResizeMode.Stretch)
         self.tx_table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
         self.tx_table.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
         
@@ -190,14 +191,28 @@ class ItemDialog(QDialog):
                 qty_item.setForeground(QColor("red"))
             self.tx_table.setItem(row, 2, qty_item)
             
+            # Unit Cost
+            if tx.transaction_type in (TransactionType.PURCHASE, TransactionType.DONATION):
+                unit_cost_str = f"${tx.unit_cost_dollars:.2f}"
+            else:
+                unit_cost_str = "-"
+            self.tx_table.setItem(row, 3, QTableWidgetItem(unit_cost_str))
+            
+            # Total Cost
+            if tx.total_financial_impact_cents:
+                total_cost_str = f"${tx.total_financial_impact_dollars:.2f}"
+            else:
+                total_cost_str = "-"
+            self.tx_table.setItem(row, 4, QTableWidgetItem(total_cost_str))
+            
             # Reference / Reason
             ref = tx.reason_code or tx.supplier or tx.donor or ""
             if tx.ref_transaction_id:
                 ref += f" (Ref: #{tx.ref_transaction_id})"
-            self.tx_table.setItem(row, 3, QTableWidgetItem(str(ref)))
+            self.tx_table.setItem(row, 5, QTableWidgetItem(str(ref)))
             
             # Notes
-            self.tx_table.setItem(row, 4, QTableWidgetItem(tx.notes or ""))
+            self.tx_table.setItem(row, 6, QTableWidgetItem(tx.notes or ""))
             
             # Void Info
             void_status = "VOIDED" if tx.is_voided else ""
@@ -207,7 +222,7 @@ class ItemDialog(QDialog):
                 status_item.setFont(QFont(self.font().family(), -1, QFont.Weight.Bold))
                 
                 # Strikeout entire row appearance (simulated)
-                for col in range(5):
+                for col in range(7):
                     item = self.tx_table.item(row, col)
                     if item:
                         font = item.font()
@@ -215,7 +230,7 @@ class ItemDialog(QDialog):
                         item.setFont(font)
                         item.setForeground(QColor("gray"))
                     
-            self.tx_table.setItem(row, 5, status_item)
+            self.tx_table.setItem(row, 7, status_item)
             
             # Store ID
             self.tx_table.item(row, 0).setData(Qt.ItemDataRole.UserRole, tx.id)
@@ -230,7 +245,7 @@ class ItemDialog(QDialog):
         tx_id = self.tx_table.item(row, 0).data(Qt.ItemDataRole.UserRole)
         
         # Check if already voided (visually)
-        status_text = self.tx_table.item(row, 5).text()
+        status_text = self.tx_table.item(row, 7).text()
         if status_text == "VOIDED":
             QMessageBox.warning(self, "Invalid Action", "This transaction is already voided.")
             return

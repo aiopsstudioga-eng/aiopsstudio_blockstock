@@ -3,14 +3,6 @@ cx_Freeze setup script for AIOps Studio - Inventory
 =====================================================
 
 This script builds the application as a Windows executable using cx_Freeze.
-
-Usage:
-    python setup.py build
-
-To build:
-    python setup.py build
-
-The executable will be created in the 'dist' directory.
 """
 
 from cx_Freeze import setup, Executable
@@ -21,7 +13,7 @@ import sys
 script_dir = os.path.dirname(os.path.abspath(__file__))
 src_dir = os.path.join(script_dir, "src")
 
-# Build options - explicitly include all packages
+# Build options
 build_exe_options = {
     "excludes": [
         "tkinter",
@@ -31,7 +23,6 @@ build_exe_options = {
         "IPython",
         "jupyter",
         "pdb",
-        "venv",
     ],
     "include_files": [
         (os.path.join(src_dir, "database", "schema.sql"), os.path.join("src", "database", "schema.sql")),
@@ -44,7 +35,6 @@ build_exe_options = {
 }
 
 # Executable configuration
-# Use "Console" for console app, "GUI" for windowed app (cx_Freeze 8.x+)
 executables = [
     Executable(
         os.path.join(src_dir, "main.py"),
