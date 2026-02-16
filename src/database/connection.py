@@ -17,6 +17,8 @@ from pathlib import Path
 from typing import Optional
 from contextlib import contextmanager
 
+from utils.app_paths import get_backups_dir
+
 
 class DatabaseManager:
     """Manages SQLite database connections and operations."""
@@ -89,16 +91,20 @@ class DatabaseManager:
         conn.executescript(script)
         conn.commit()
     
-    def backup(self, backup_dir: str = "backups") -> str:
+    def backup(self, backup_dir: Optional[Path] = None) -> str:
         """
         Create a backup of the database.
         
         Args:
-            backup_dir: Directory to store backups
+            backup_dir: Directory to store backups (defaults to AppData/backups)
             
         Returns:
             str: Path to the backup file
         """
+        # Use AppData backups directory by default
+        if backup_dir is None:
+            backup_dir = get_backups_dir()
+        
         # Create backup directory if it doesn't exist
         Path(backup_dir).mkdir(parents=True, exist_ok=True)
         

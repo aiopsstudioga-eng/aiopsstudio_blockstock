@@ -6,7 +6,7 @@ Generates professional PDF reports for financial and stock status.
 
 from datetime import date
 from pathlib import Path
-from typing import Dict
+from typing import Dict, Optional
 
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import letter
@@ -18,19 +18,23 @@ from reportlab.platypus import (
 )
 from reportlab.lib.enums import TA_CENTER, TA_RIGHT
 
+from utils.app_paths import get_reports_dir
+
 
 class PDFReportGenerator:
     """Generate PDF reports."""
     
-    def __init__(self, output_dir: str = "reports"):
+    def __init__(self, output_dir: Optional[Path] = None):
         """
         Initialize PDF generator.
         
         Args:
-            output_dir: Directory to save reports
+            output_dir: Directory to save reports (defaults to AppData/reports)
         """
+        if output_dir is None:
+            output_dir = get_reports_dir()
         self.output_dir = Path(output_dir)
-        self.output_dir.mkdir(exist_ok=True)
+        self.output_dir.mkdir(parents=True, exist_ok=True)
         
         self.styles = getSampleStyleSheet()
         
