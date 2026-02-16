@@ -23,6 +23,9 @@ from services.reporting_service import ReportingService
 from services.inventory_service import InventoryService
 from services.reporting_service import ReportingService
 # defined locally in add_pages to speed up startup
+from utils.logger import setup_logger
+
+logger = setup_logger(__name__)
 
 
 class MainWindow(QMainWindow):
@@ -526,7 +529,7 @@ class MainWindow(QMainWindow):
             with open(settings_path, 'w') as f:
                 json.dump(settings, f)
         except Exception as e:
-            print(f"Error saving settings: {e}")
+            logger.error(f"Error saving settings: {e}", exc_info=True)
     
     def closeEvent(self, event):
         """Handle application close event."""
@@ -534,9 +537,9 @@ class MainWindow(QMainWindow):
         if self.get_compact_on_exit_setting():
             try:
                 self.service.db_manager.vacuum()
-                print("Database compacted on exit")
+                logger.info("Database compacted on exit")
             except Exception as e:
-                print(f"Error compacting database: {e}")
+                logger.error(f"Error compacting database: {e}", exc_info=True)
         
         # Call parent close event
         super().closeEvent(event)

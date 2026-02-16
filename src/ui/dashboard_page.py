@@ -19,6 +19,11 @@ from PyQt6.QtGui import QColor, QFont
 # import matplotlib.pyplot as plt
 
 from services.reporting_service import ReportingService
+from utils.error_handler import show_error
+from utils.logger import setup_logger
+
+logger = setup_logger(__name__)
+
 
 
 class StatCard(QFrame):
@@ -212,4 +217,10 @@ class DashboardPage(QWidget):
             self.distributed_canvas.draw()
             
         except Exception as e:
-            print(f"Error loading dashboard: {e}")
+            show_error(
+                self,
+                "Dashboard Error",
+                "Failed to load dashboard data. Please check the application logs for details.",
+                exception=e
+            )
+

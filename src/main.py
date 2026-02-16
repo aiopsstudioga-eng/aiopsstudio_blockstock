@@ -15,6 +15,9 @@ from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QFont
 from datetime import datetime
 from ui.main_window import MainWindow
+from utils.logger import setup_logger
+
+logger = setup_logger(__name__)
 
 
 import os
@@ -150,16 +153,16 @@ def setup_database(appdata_dir: str, db_name: str) -> str:
         str: Full path to the database
     """
     db_path = os.path.join(appdata_dir, db_name)
-    print(f"Using database at: {db_path}")
+    logger.info(f"Using database at: {db_path}")
     
     is_new_db = not os.path.exists(db_path)
     
     if is_new_db:
-        print(f"Initializing {db_name}...")
+        logger.info(f"Initializing {db_name}...")
         schema_path = get_schema_path()
         try:
             init_database(db_path, schema_path)
-            print("Database initialized successfully.")
+            logger.info("Database initialized successfully.")
             
             # Seed data if Training Mode
             if db_name == "training.db":
@@ -167,12 +170,12 @@ def setup_database(appdata_dir: str, db_name: str) -> str:
                     from database.seed_data import seed_training_data
                     seed_training_data(db_path)
                 except ImportError as e:
-                    print(f"Could not import seed script: {e}")
+                    logger.warning(f"Could not import seed script: {e}")
                 except Exception as e:
-                    print(f"Error checking/seeding data: {e}")
+                    logger.error(f"Error checking/seeding data: {e}", exc_info=True)
 
         except Exception as e:
-            print(f"Error initializing database: {e}")
+            logger.error(f"Error initializing database: {e}", exc_info=True)
             sys.exit(1)
     
     return db_path
@@ -210,7 +213,7 @@ def main():
     
     # Initialize the global database manager singleton
     get_db_manager(db_path)
-    print(f"Database manager initialized with: {db_path}")
+    logger.info(f"Database manager initialized with: {db_path}")
     
     # Create and show main window with mode in title
     window = MainWindow()
@@ -231,7 +234,7 @@ def main():
         from PyQt6.QtWidgets import QMessageBox
 
         error_msg = "".join(traceback.format_exception(exctype, value, traceback_obj))
-        print(f"Unhandled Exception: {error_msg}")
+        logger.critical(f"Unhandled Exception: {error_msg}")
         
         # Write to crash log
         log_path = os.path.join(appdata_dir, "crash_log.txt")

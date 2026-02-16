@@ -43,3 +43,15 @@ def get_backups_dir() -> Path:
     backups_dir = get_app_data_dir() / 'backups'
     backups_dir.mkdir(parents=True, exist_ok=True)
     return backups_dir
+
+
+def get_logs_dir() -> Path:
+    """
+    Get the logs directory in AppData.
+    
+    Returns:
+        Path: Path to logs directory, created if it doesn't exist
+    """
+    logs_dir = get_app_data_dir() / 'logs'
+    logs_dir.mkdir(parents=True, exist_ok=True)
+    return logs_dir

@@ -10,6 +10,9 @@ from pathlib import Path
 
 from services.inventory_service import InventoryService
 from models.item import InventoryItem
+from utils.logger import setup_logger
+
+logger = setup_logger(__name__)
 
 class DataService:
     """Service for data import/export operations."""
@@ -55,7 +58,7 @@ class DataService:
                     ])
             return True
         except Exception as e:
-            print(f"Export error: {e}")
+            logger.error(f"Export error: {e}", exc_info=True)
             return False
 
     def import_items_from_csv(self, file_path: str) -> Tuple[int, int, List[str]]:
@@ -174,5 +177,5 @@ class DataService:
                     ])
             return True
         except Exception as e:
-            print(f"Export error: {e}")
+            logger.error(f"Export error: {e}", exc_info=True)
             return False

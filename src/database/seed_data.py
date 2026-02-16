@@ -1,6 +1,9 @@
 import sqlite3
 import os
 from datetime import datetime
+from utils.logger import setup_logger
+
+logger = setup_logger(__name__)
 
 def seed_training_data(target_db_path):
     """
@@ -11,10 +14,10 @@ def seed_training_data(target_db_path):
     base_dir = os.path.dirname(target_db_path)
     source_db_path = os.path.join(base_dir, "inventory.db")
     
-    print(f"Seeding training data from {source_db_path} to {target_db_path}...")
+    logger.info(f"Seeding training data from {source_db_path} to {target_db_path}...")
     
     if not os.path.exists(source_db_path):
-        print(f"Source database {source_db_path} not found. Cannot seed from production.")
+        logger.warning(f"Source database {source_db_path} not found. Cannot seed from production.")
         return
 
     # Connect to Training DB (Target)
@@ -34,7 +37,7 @@ def seed_training_data(target_db_path):
         # 1. Copy Categories (to ensure FKs valid, though schema has defaults)
         # Actually schema.sql already inserts default categories. 
         # But user might have added custom ones.
-        print("Copying categories...")
+        logger.info("Copying categories...")
         cursor_source.execute("SELECT * FROM item_categories")
         categories = cursor_source.fetchall()
         
@@ -45,7 +48,7 @@ def seed_training_data(target_db_path):
         """, categories)
         
         # 2. Copy Items
-        print("Copying items...")
+        logger.info("Copying items...")
         cursor_source.execute("SELECT * FROM inventory_items")
         items = cursor_source.fetchall()
         
@@ -54,7 +57,7 @@ def seed_training_data(target_db_path):
         # total_cost_basis_cents, is_active, created_at, updated_at
         
         if not items:
-            print("No items found in production database.")
+            logger.info("No items found in production database.")
         
         cursor_target.executemany("""
             INSERT OR REPLACE INTO inventory_items 
@@ -65,7 +68,7 @@ def seed_training_data(target_db_path):
         
         # 3. Generate Transactions
         # For each item with quantity > 0, we need a transaction so it can be Voided.
-        print("Generating initial history for training...")
+        logger.info("Generating initial history for training...")
         
         now = datetime.now()
         
@@ -89,10 +92,10 @@ def seed_training_data(target_db_path):
                 """, (item_id, qty, unit_cost, now))
                 
         conn_target.commit()
-        print("Seeding complete.")
+        logger.info("Seeding complete.")
         
     except Exception as e:
-        print(f"Error during seeding: {e}")
+        logger.error(f"Error during seeding: {e}", exc_info=True)
         conn_target.rollback()
     finally:
         conn_source.close()
