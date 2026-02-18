@@ -1,14 +1,15 @@
 """
 Intake dialogs for purchases and donations with color-coded UI.
+Includes SKU autocomplete (type-ahead) for quick item lookup.
 """
 
 from PyQt6.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QFormLayout,
     QLabel, QLineEdit, QComboBox, QDoubleSpinBox, QPushButton,
-    QTextEdit, QMessageBox
+    QTextEdit, QMessageBox, QCompleter
 )
 from PyQt6.QtCore import Qt
-from PyQt6.QtGui import QFont
+from PyQt6.QtGui import QFont, QStandardItemModel, QStandardItem
 
 from services.inventory_service import InventoryService
 
@@ -27,7 +28,10 @@ class PurchaseDialog(QDialog):
         super().__init__(parent)
         
         self.service = service
+        self.selected_item_id = None
+        self._categories = {c.id: c.name for c in service.get_all_categories()}
         self.init_ui()
+        self._setup_sku_completer()
     
     def init_ui(self):
         """Initialize user interface."""
@@ -66,10 +70,31 @@ class PurchaseDialog(QDialog):
         form = QFormLayout()
         form.setSpacing(15)
         
-        # Item selection
-        self.item_combo = QComboBox()
-        self.load_items()
-        form.addRow("Item*:", self.item_combo)
+        # SKU Input
+        self.sku_input = QLineEdit()
+        self.sku_input.setPlaceholderText("Type 2+ chars for suggestions, or scan SKU")
+        self.sku_input.returnPressed.connect(self.search_item)
+        self.sku_input.editingFinished.connect(self.search_item)
+        form.addRow("SKU*:", self.sku_input)
+
+        # Item Name (Read-only)
+        self.item_name_display = QLineEdit()
+        self.item_name_display.setReadOnly(True)
+        self.item_name_display.setPlaceholderText("Item name will appear here")
+        self.item_name_display.setStyleSheet("background-color: #f0f0f0; color: #7f8c8d;")
+        form.addRow("Item Name:", self.item_name_display)
+
+        # Category (Read-only, auto-populated)
+        self.category_display = QLineEdit()
+        self.category_display.setReadOnly(True)
+        self.category_display.setPlaceholderText("Category will appear here")
+        self.category_display.setStyleSheet("background-color: #f0f0f0; color: #7f8c8d;")
+        form.addRow("Category:", self.category_display)
+
+        # Current Stock (Read-only)
+        self.stock_label = QLabel("-")
+        self.stock_label.setStyleSheet("font-weight: bold;")
+        form.addRow("Current Stock:", self.stock_label)
         
         # Quantity
         self.quantity_spin = QDoubleSpinBox()
@@ -142,19 +167,73 @@ class PurchaseDialog(QDialog):
         
         layout.addLayout(button_layout)
     
-    def load_items(self):
-        """Load items into combo box."""
-        try:
-            items = self.service.get_all_items()
-            
-            for item in items:
-                self.item_combo.addItem(
-                    f"{item.name} ({item.sku}) - {item.quantity_on_hand:.1f} in stock",
-                    item.id
-                )
-                
-        except Exception as e:
-            QMessageBox.warning(self, "Error", f"Failed to load items: {e}")
+    def _setup_sku_completer(self):
+        """Set up the SKU autocomplete completer."""
+        self._completer_model = QStandardItemModel()
+        self._completer = QCompleter(self._completer_model, self)
+        self._completer.setCaseSensitivity(Qt.CaseSensitivity.CaseInsensitive)
+        self._completer.setFilterMode(Qt.MatchFlag.MatchContains)
+        self._completer.setCompletionMode(QCompleter.CompletionMode.PopupCompletion)
+        self._completer.setMaxVisibleItems(10)
+        self._completer.activated.connect(self._on_sku_selected)
+        self.sku_input.setCompleter(self._completer)
+        self.sku_input.textChanged.connect(self._on_sku_text_changed)
+
+    def _on_sku_text_changed(self, text: str):
+        """Update completer suggestions when user types 2+ characters."""
+        text = text.strip()
+        if len(text) < 2:
+            self._completer_model.clear()
+            return
+        
+        items = self.service.search_items_by_prefix(text)
+        self._completer_model.clear()
+        
+        for item in items:
+            display = f"{item.sku}  —  {item.name}"
+            std_item = QStandardItem(display)
+            std_item.setData(item.sku, Qt.ItemDataRole.UserRole)  # Store raw SKU
+            std_item.setData(item.id, Qt.ItemDataRole.UserRole + 1)  # Store item ID
+            self._completer_model.appendRow(std_item)
+
+    def _on_sku_selected(self, text: str):
+        """Handle completer selection — extract SKU and populate fields."""
+        # text is the display string "SKU  —  Item Name"
+        sku = text.split("  —  ")[0].strip() if "  —  " in text else text.strip()
+        self.sku_input.setText(sku)
+        self.search_item()
+
+    def _populate_item_fields(self, item):
+        """Populate all item display fields from an InventoryItem."""
+        self.selected_item_id = item.id
+        self.item_name_display.setText(item.name)
+        self.stock_label.setText(f"{item.quantity_on_hand:,.1f} units")
+        self.stock_label.setStyleSheet("color: #27ae60; font-weight: bold;")
+        cat_name = self._categories.get(item.category_id, "") if item.category_id else ""
+        self.category_display.setText(cat_name)
+
+    def _clear_item_fields(self):
+        """Clear all item display fields."""
+        self.selected_item_id = None
+        self.item_name_display.setText("❌ Item not found")
+        self.stock_label.setText("-")
+        self.stock_label.setStyleSheet("color: #e74c3c; font-weight: bold;")
+        self.category_display.setText("")
+
+    def search_item(self):
+        """Search for item by SKU."""
+        sku = self.sku_input.text().strip()
+        if not sku:
+            return
+
+        item = self.service.get_item_by_sku(sku)
+        if item:
+            self._populate_item_fields(item)
+            # Move focus to quantity
+            self.quantity_spin.setFocus()
+            self.quantity_spin.selectAll()
+        else:
+            self._clear_item_fields()
     
     def update_total(self):
         """Update total cost display."""
@@ -165,9 +244,8 @@ class PurchaseDialog(QDialog):
     
     def save_purchase(self):
         """Save purchase transaction."""
-        item_id = self.item_combo.currentData()
-        if not item_id:
-            QMessageBox.warning(self, "Validation Error", "Please select an item")
+        if not self.selected_item_id:
+            QMessageBox.warning(self, "Validation Error", "Please enter a valid SKU")
             return
         
         quantity = self.quantity_spin.value()
@@ -177,7 +255,7 @@ class PurchaseDialog(QDialog):
         
         try:
             item, transaction = self.service.process_purchase(
-                item_id=item_id,
+                item_id=self.selected_item_id,
                 quantity=quantity,
                 unit_cost_dollars=unit_cost,
                 supplier=supplier,
@@ -213,7 +291,10 @@ class DonationDialog(QDialog):
         super().__init__(parent)
         
         self.service = service
+        self.selected_item_id = None
+        self._categories = {c.id: c.name for c in service.get_all_categories()}
         self.init_ui()
+        self._setup_sku_completer()
     
     def init_ui(self):
         """Initialize user interface."""
@@ -260,10 +341,30 @@ class DonationDialog(QDialog):
         form = QFormLayout()
         form.setSpacing(15)
         
-        # Item selection
-        self.item_combo = QComboBox()
-        self.load_items()
-        form.addRow("Item*:", self.item_combo)
+        # SKU Input
+        self.sku_input = QLineEdit()
+        self.sku_input.setPlaceholderText("Type 2+ chars for suggestions, or scan SKU")
+        self.sku_input.returnPressed.connect(self.search_item)
+        self.sku_input.editingFinished.connect(self.search_item)
+        form.addRow("SKU*:", self.sku_input)
+
+        # Item Name (Read-only)
+        self.item_name_display = QLineEdit()
+        self.item_name_display.setReadOnly(True)
+        self.item_name_display.setPlaceholderText("Item name will appear here")
+        self.item_name_display.setStyleSheet("background-color: #f0f0f0; color: #7f8c8d;")
+        form.addRow("Item Name:", self.item_name_display)
+
+        # Category (Read-only, auto-populated)
+        self.category_display = QLineEdit()
+        self.category_display.setReadOnly(True)
+        self.category_display.setPlaceholderText("Category will appear here")
+        self.category_display.setStyleSheet("background-color: #f0f0f0; color: #7f8c8d;")
+        form.addRow("Category:", self.category_display)
+        
+        # Current Stock
+        self.stock_label = QLabel("-")
+        form.addRow("Current Stock:", self.stock_label)
         
         # Quantity
         self.quantity_spin = QDoubleSpinBox()
@@ -328,19 +429,72 @@ class DonationDialog(QDialog):
         
         layout.addLayout(button_layout)
     
-    def load_items(self):
-        """Load items into combo box."""
-        try:
-            items = self.service.get_all_items()
-            
-            for item in items:
-                self.item_combo.addItem(
-                    f"{item.name} ({item.sku}) - {item.quantity_on_hand:.1f} in stock",
-                    item.id
-                )
-                
-        except Exception as e:
-            QMessageBox.warning(self, "Error", f"Failed to load items: {e}")
+    def _setup_sku_completer(self):
+        """Set up the SKU autocomplete completer."""
+        self._completer_model = QStandardItemModel()
+        self._completer = QCompleter(self._completer_model, self)
+        self._completer.setCaseSensitivity(Qt.CaseSensitivity.CaseInsensitive)
+        self._completer.setFilterMode(Qt.MatchFlag.MatchContains)
+        self._completer.setCompletionMode(QCompleter.CompletionMode.PopupCompletion)
+        self._completer.setMaxVisibleItems(10)
+        self._completer.activated.connect(self._on_sku_selected)
+        self.sku_input.setCompleter(self._completer)
+        self.sku_input.textChanged.connect(self._on_sku_text_changed)
+
+    def _on_sku_text_changed(self, text: str):
+        """Update completer suggestions when user types 2+ characters."""
+        text = text.strip()
+        if len(text) < 2:
+            self._completer_model.clear()
+            return
+        
+        items = self.service.search_items_by_prefix(text)
+        self._completer_model.clear()
+        
+        for item in items:
+            display = f"{item.sku}  —  {item.name}"
+            std_item = QStandardItem(display)
+            std_item.setData(item.sku, Qt.ItemDataRole.UserRole)
+            std_item.setData(item.id, Qt.ItemDataRole.UserRole + 1)
+            self._completer_model.appendRow(std_item)
+
+    def _on_sku_selected(self, text: str):
+        """Handle completer selection — extract SKU and populate fields."""
+        sku = text.split("  —  ")[0].strip() if "  —  " in text else text.strip()
+        self.sku_input.setText(sku)
+        self.search_item()
+
+    def _populate_item_fields(self, item):
+        """Populate all item display fields from an InventoryItem."""
+        self.selected_item_id = item.id
+        self.item_name_display.setText(item.name)
+        self.stock_label.setText(f"{item.quantity_on_hand:,.1f} units")
+        self.stock_label.setStyleSheet("color: #27ae60; font-weight: bold;")
+        cat_name = self._categories.get(item.category_id, "") if item.category_id else ""
+        self.category_display.setText(cat_name)
+
+    def _clear_item_fields(self):
+        """Clear all item display fields."""
+        self.selected_item_id = None
+        self.item_name_display.setText("❌ Item not found")
+        self.stock_label.setText("-")
+        self.stock_label.setStyleSheet("color: #e74c3c; font-weight: bold;")
+        self.category_display.setText("")
+
+    def search_item(self):
+        """Search for item by SKU."""
+        sku = self.sku_input.text().strip()
+        if not sku:
+            return
+
+        item = self.service.get_item_by_sku(sku)
+        if item:
+            self._populate_item_fields(item)
+            # Move focus
+            self.quantity_spin.setFocus()
+            self.quantity_spin.selectAll()
+        else:
+            self._clear_item_fields()
     
     def update_total(self):
         """Update total FMV display."""
@@ -351,9 +505,8 @@ class DonationDialog(QDialog):
     
     def save_donation(self):
         """Save donation transaction."""
-        item_id = self.item_combo.currentData()
-        if not item_id:
-            QMessageBox.warning(self, "Validation Error", "Please select an item")
+        if not self.selected_item_id:
+            QMessageBox.warning(self, "Validation Error", "Please enter a valid SKU")
             return
         
         quantity = self.quantity_spin.value()
@@ -363,7 +516,7 @@ class DonationDialog(QDialog):
         
         try:
             item, transaction = self.service.process_donation(
-                item_id=item_id,
+                item_id=self.selected_item_id,
                 quantity=quantity,
                 fair_market_value_dollars=fmv,
                 donor=donor,

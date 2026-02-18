@@ -78,6 +78,14 @@ class DataService:
         errors = []
         
         try:
+            # Build category name -> id map for name-based resolution
+            category_map = {}
+            try:
+                categories = self.inventory_service.get_all_categories()
+                category_map = {c.name.upper(): c.id for c in categories}
+            except Exception:
+                logger.warning("Could not load categories for CSV import")
+
             with open(file_path, 'r', newline='', encoding='utf-8') as f:
                 reader = csv.DictReader(f)
                 
@@ -97,29 +105,49 @@ class DataService:
                         if not sku or not name:
                             raise ValueError("SKU and Name are required")
                             
-                        # Optional fields
-                        category_id_str = row.get('category id', row.get('category_id', ''))
-                        category_id = int(category_id_str) if category_id_str and category_id_str.isdigit() else None
+                        # Optional fields — resolve category by ID or name
+                        category_id = self._resolve_category(row, category_map)
                         
                         threshold_str = row.get('reorder threshold', row.get('reorder_threshold', '10'))
                         reorder_threshold = int(threshold_str) if threshold_str.isdigit() else 10
                         
+                        # New fields for Initial Stock
+                        quantity_str = row.get('quantity', row.get('qty', row.get('quantity_on_hand', '0')))
+                        # Remove commas/currency symbols if present
+                        quantity_str = str(quantity_str).replace(',', '').strip()
+                        quantity = float(quantity_str) if quantity_str and quantity_str.replace('.', '', 1).isdigit() else 0.0
+
+                        cost_str = row.get('unit cost', row.get('unit_cost', row.get('unit cost ($)', row.get('cost', '0'))))
+                        cost_str = str(cost_str).replace('$', '').replace(',', '').strip()
+                        unit_cost = float(cost_str) if cost_str and cost_str.replace('.', '', 1).isdigit() else 0.0
+
                         # check if item exists
                         existing = self.inventory_service.get_item_by_sku(sku)
                         if existing:
-                            # Update existing? For now, skip or update basic info
-                            # Let's simple skip for safety in MVP+, or maybe update name
+                            # Update existing? For now, fail or skip.
+                            # If user wants to update stock for existing items, that's a different feature (Stock Take)
                             fail_count += 1
                             errors.append(f"Row {row_num}: Item with SKU {sku} already exists")
                             continue
                             
                         # Create item
-                        self.inventory_service.create_item(
+                        new_item = self.inventory_service.create_item(
                             sku=sku,
                             name=name,
                             category_id=category_id,
                             reorder_threshold=reorder_threshold
                         )
+                        
+                        # Add Initial Stock if Quantity > 0
+                        if quantity > 0:
+                            self.inventory_service.process_purchase(
+                                item_id=new_item.id,
+                                quantity=quantity,
+                                unit_cost_dollars=unit_cost,
+                                supplier="CSV Import",
+                                notes="Initial import from file"
+                            )
+
                         success_count += 1
                         
                     except Exception as e:
@@ -130,6 +158,53 @@ class DataService:
             
         except Exception as e:
             return 0, 0, [f"File error: {str(e)}"]
+
+    def _resolve_category(self, row: Dict, category_map: Dict[str, int]) -> Optional[int]:
+        """
+        Resolve category from a CSV row.
+        
+        Checks for category ID first (columns: 'category id', 'category_id'),
+        then falls back to category name lookup (column: 'category').
+        If a category name is found that doesn't exist, a new category is created.
+        
+        Args:
+            row: CSV row dict (lowercase keys)
+            category_map: Mutable dict of {UPPER_NAME: id} for existing categories
+            
+        Returns:
+            Category ID or None
+        """
+        # 1. Try integer category ID first
+        category_id_str = row.get('category id', row.get('category_id', '')).strip()
+        if category_id_str and category_id_str.isdigit():
+            return int(category_id_str)
+        
+        # 2. Try category name lookup
+        category_name = row.get('category', '').strip()
+        if not category_name:
+            return None
+        
+        upper_name = category_name.upper()
+        if upper_name in category_map:
+            return category_map[upper_name]
+        
+        # 3. Create new category
+        try:
+            db = self.inventory_service.db_manager
+            with db.transaction() as conn:
+                cursor = conn.cursor()
+                cursor.execute(
+                    "INSERT INTO item_categories (name, description) VALUES (?, ?)",
+                    (category_name, "Imported from CSV")
+                )
+                new_id = cursor.lastrowid
+            
+            category_map[upper_name] = new_id
+            logger.info(f"Created new category during CSV import: '{category_name}' (id={new_id})")
+            return new_id
+        except Exception as e:
+            logger.warning(f"Failed to create category '{category_name}': {e}")
+            return None
 
     def export_transactions_to_csv(self, file_path: str) -> bool:
         """

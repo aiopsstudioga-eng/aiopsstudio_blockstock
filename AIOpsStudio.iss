@@ -75,17 +75,16 @@ end;
 procedure CurUninstallStepChanged(CurUninstallStep: TUninstallStep);
 var
   AppDataDir: String;
-  DeleteAppData: Integer;
 begin
   if CurUninstallStep = usUninstall then
   begin
     AppDataDir := ExpandConstant('{localappdata}\AIOpsStudio');
     if DirExists(AppDataDir) then
     begin
-      DeleteAppData := MsgBox('Do you want to delete your database and application data?' + #13#10 + 
-                               'Choose No if you plan to reinstall or want to keep your data.', 
-                               mbConfirmation, MB_YESNO);
-      if DeleteAppData = IDYES then
+        // MsgBox returns IDYES (6) if user clicks Yes
+      if MsgBox('Do you want to delete your database and application data?' + #13#10 + 
+                 'Choose No if you plan to reinstall or want to keep your data.', 
+                 mbConfirmation, MB_YESNO) = IDYES then
       begin
         DelTree(AppDataDir, True, True, True);
       end;

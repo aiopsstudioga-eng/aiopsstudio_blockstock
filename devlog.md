@@ -29,6 +29,61 @@ Each entry follows this structure:
 
 ## Development Entries
 
+### 2026-02-17 | SKU Autocomplete (Type-Ahead) Feature
+
+**Phase:** Phase 2+ Enhancement
+**Focus:** Volunteer UX Improvement
+
+#### Accomplishments
+- 🔍 **SKU Autocomplete**: Added type-ahead suggestions to Purchase and Donation dialogs.
+  - Dropdown appears after typing 2+ characters showing `SKU — Item Name` pairs.
+  - Matches by both SKU prefix and item name prefix.
+  - Selecting a suggestion auto-populates Item Name, Category, and Current Stock fields.
+- 📂 **Category Display**: Added read-only Category field to both Purchase and Donation dialogs.
+  - Auto-populated from the item master when a SKU is selected.
+
+#### Technical Decisions
+- **QCompleter with QStandardItemModel**: Rebuilds the model on each keystroke (after 2-char threshold) via `search_items_by_prefix()`. The SQLite `idx_items_sku` index ensures fast prefix matching even with large inventories.
+- **Service-Layer Search**: New `InventoryService.search_items_by_prefix()` uses `LIKE ?` with parameterized queries (safe from SQL injection) and returns up to 15 results.
+- **Dual Match**: Searches both `sku LIKE prefix%` and `name LIKE prefix%` so volunteers can type either the SKU code or the item name.
+
+#### Files Changed
+- `src/services/inventory_service.py` — Added `search_items_by_prefix()` method
+- `src/ui/intake_dialogs.py` — Added `QCompleter` setup, `_on_sku_text_changed`, `_on_sku_selected`, `_populate_item_fields`, `_clear_item_fields` to both `PurchaseDialog` and `DonationDialog`
+
+#### Next Steps
+- Test autocomplete with existing inventory data
+- Rebuild Windows `.exe` with this feature
+
+---
+
+### 2026-02-17 | CSV Import Category Fix
+
+**Phase:** Bug Fix
+**Focus:** Data Import/Export
+
+#### Accomplishments
+- 🐛 **Fixed CSV Import Category Bug**: Category names present in CSV files were silently ignored during import via the Items page.
+
+#### Bug Details
+**Root Cause**: `DataService.import_items_from_csv()` only looked for `category id` / `category_id` columns (expecting integer IDs). However, `export_items_to_csv()` writes a `Category` column containing category **names** (e.g., "Food", "Dry Goods"). When exporting then re-importing, the `category` header (lowercased) never matched the import's expected headers, so all items were imported with `category_id = None`.
+
+**Fix Applied**:
+- Added `_resolve_category()` helper method to `DataService` that:
+  1. First checks for `category id` / `category_id` column (integer ID) — preserves backwards compatibility
+  2. Falls back to `category` column for name-based lookup against existing categories
+  3. Auto-creates new categories if the name doesn't match any existing category
+- Built a category `{name: id}` map before the row loop for efficient lookups without repeated DB queries
+
+#### Technical Decisions
+- **Backwards Compatible**: Existing CSVs with `Category ID` integer columns still work unchanged
+- **Auto-Create Categories**: Unknown category names are auto-created during import rather than silently dropped, providing a smoother user experience for third-party CSVs
+
+#### Next Steps
+- Test export → import round-trip in production build
+
+---
+
 ### 2026-02-16 | Logging & Error Handling Implementation
 
 **Phase:** Quality Assurance / Infrastructure

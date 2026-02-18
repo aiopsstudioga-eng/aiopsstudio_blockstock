@@ -1,0 +1,7 @@
+Testing CSV Import Logic...
+Created CSV at csv_import_test\import_data.csv
+Import Result: Success=4, Fail=0
+PASS: Item 1 imported with correct quantity (100) and cost (5.50)
+PASS: Item 2 imported with correct quantity (50.5) and cost (10.00)
+PASS: Item 3 imported with correct quantity (0)
+Cleanup failed: [WinError 32] The process cannot access the file because it is being used by another process: 'csv_import_test\\test_import.db'

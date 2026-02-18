@@ -138,6 +138,33 @@ class InventoryService:
         
         return [InventoryItem.from_db_row(row) for row in cursor.fetchall()]
     
+    def search_items_by_prefix(self, prefix: str, limit: int = 15) -> List[InventoryItem]:
+        """
+        Search active items by SKU or name prefix for autocomplete.
+        
+        Uses LIKE query which leverages the idx_items_sku index for SKU matches.
+        
+        Args:
+            prefix: The prefix to search for (minimum 2 chars recommended)
+            limit: Maximum results to return
+            
+        Returns:
+            List of matching InventoryItem, ordered by SKU
+        """
+        conn = self.db_manager.get_connection()
+        cursor = conn.cursor()
+        
+        pattern = f"{prefix}%"
+        cursor.execute("""
+            SELECT * FROM inventory_items 
+            WHERE is_active = 1 
+              AND (sku LIKE ? OR name LIKE ?)
+            ORDER BY sku
+            LIMIT ?
+        """, (pattern, pattern, limit))
+        
+        return [InventoryItem.from_db_row(row) for row in cursor.fetchall()]
+    
     def update_item(
         self,
         item_id: int,
