@@ -524,11 +524,14 @@ class InventoryService:
             WHERE item_id = ?
             ORDER BY transaction_date DESC, id DESC
         """
-        
+
+        # P1-4: Use parameterized LIMIT to prevent SQL injection
+        params: list = [item_id]
         if limit:
-            query += f" LIMIT {limit}"
-        
-        cursor.execute(query, (item_id,))
+            query += " LIMIT ?"
+            params.append(limit)
+
+        cursor.execute(query, params)
         
         return [Transaction.from_db_row(row) for row in cursor.fetchall()]
     

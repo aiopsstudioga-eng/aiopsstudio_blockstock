@@ -29,6 +29,68 @@ Each entry follows this structure:
 
 ## Development Entries
 
+### 2026-02-17 | Code Review — P1 & P2 Bug Fix Implementation
+
+**Phase:** Quality Assurance / Bug Fixes
+**Focus:** Code Review Findings — Critical and High Priority Fixes
+
+#### Accomplishments
+
+- 🔴 **P1-1 | Voided Transactions in Financial Reports (Critical)**
+  - Added `AND it.is_voided = 0` filter to all financial queries in `reporting_service.py`
+  - Affected: `get_financial_report_data()`, `get_impact_report_data()` (both queries), `get_purchases_report_data()`, `get_dashboard_stats()` top-distributed aggregation
+  - Voided transactions no longer inflate COGS, FMV totals, or purchase history
+
+- 🔴 **P1-2 | Exception Hook Registered After `window.show()` (Critical)**
+  - Moved `exception_hook` definition and `sys.excepthook` assignment to BEFORE `window.show()` in `main.py`
+  - Startup exceptions during window construction are now caught, logged, and shown to the user
+
+- 🔴 **P1-3 | Tooltip Bug on Production Mode Button (Critical)**
+  - Fixed `training_btn.setToolTip(...)` being called twice in `DatabaseSelectionDialog.init_ui()`
+  - Second call now correctly targets `production_btn`
+
+- 🔴 **P1-4 | SQL Injection via String-Interpolated LIMIT (Critical)**
+  - Replaced `f" LIMIT {limit}"` string interpolation with parameterized `" LIMIT ?"` in both `reporting_service.py` (`get_transaction_history`) and `inventory_service.py` (`get_item_transactions`)
+
+- 🟡 **P2-1 | DatabaseManager Singleton Initialization Order (High)**
+  - Updated `get_db_manager()` in `connection.py` to raise `RuntimeError` if called before the singleton is initialized (no `db_path` provided on first call)
+  - Added `reset_db_manager()` function for clean test isolation
+  - Uses sentinel object `_UNSET` to distinguish "no argument" from `None`
+
+- 🟡 **P2-2 | Backup Uses `shutil.copy2` on WAL Database (High)**
+  - Replaced file copy with SQLite's built-in online backup API (`Connection.backup()`) in `DatabaseManager.backup()`
+  - Backup is now WAL-safe and atomic — no risk of producing a corrupt backup with an uncheckpointed WAL file
+
+- 🟡 **P2-3 | PurchaseDialog/DonationDialog Code Duplication (High)**
+  - Introduced `BaseIntakeDialog(QDialog)` abstract base class in `intake_dialogs.py`
+  - All shared logic (SKU autocomplete, completer model, item lookup, field population, form scaffolding) moved to base class — single implementation
+  - `PurchaseDialog` and `DonationDialog` now only contain their theme constants, specific form rows, and `_save()` method
+  - Lines of duplicated code eliminated: ~150 lines → ~50 lines per subclass
+
+- 🟡 **P2-4 | Integer Truncation in Cost Calculations (High)**
+  - Replaced `int()` with `round()` in `InventoryItem.current_unit_cost_cents` and `calculate_distribution_state()` in `item.py`
+  - Prevents systematic penny-per-transaction rounding loss over high-volume periods
+
+#### Testing
+- Updated `tests/conftest.py` with `isolated_db` autouse fixture using `reset_db_manager()` for per-test clean state
+- Updated `test_weighted_average.py` rounding assertion: `66` → `67` (10000/150 = 66.67, correctly rounds to 67)
+- **All 18 tests passing** ✅
+
+#### Files Changed
+- `src/main.py` — P1-2 (exception hook order), P1-3 (tooltip bug)
+- `src/services/reporting_service.py` — P1-1 (voided filter), P1-4 (LIMIT param)
+- `src/services/inventory_service.py` — P1-4 (LIMIT param)
+- `src/models/item.py` — P2-4 (rounding fix)
+- `src/database/connection.py` — P2-1 (singleton enforcement + reset), P2-2 (backup API)
+- `src/ui/intake_dialogs.py` — P2-3 (BaseIntakeDialog refactor)
+- `tests/conftest.py` — P2-1 (isolated_db fixture)
+- `tests/test_weighted_average.py` — P2-4 (rounding assertion update)
+
+#### Next Steps
+- Continue with P3 items (void workflow tests, DataService tests, consolidate duplicate transaction history methods)
+
+---
+
 ### 2026-02-17 | SKU Autocomplete (Type-Ahead) Feature
 
 **Phase:** Phase 2+ Enhancement

@@ -36,7 +36,10 @@ class ReportingService:
     ) -> Dict:
         """
         Get financial report data (COGS).
-        
+
+        Only includes non-voided DISTRIBUTION transactions so that voided
+        distributions do not inflate reported COGS figures.
+
         Args:
             start_date: Start date (optional, defaults to beginning of time)
             end_date: End date (optional, defaults to now)
@@ -47,7 +50,7 @@ class ReportingService:
         conn = self.db_manager.get_connection()
         cursor = conn.cursor()
         
-        # Build query with date filters
+        # Build query with date filters — P1-1: exclude voided transactions
         query = """
             SELECT 
                 ii.name,
@@ -60,6 +63,7 @@ class ReportingService:
             FROM inventory_transactions it
             JOIN inventory_items ii ON it.item_id = ii.id
             WHERE it.transaction_type = 'DISTRIBUTION'
+              AND it.is_voided = 0
         """
         
         params = []
@@ -134,7 +138,9 @@ class ReportingService:
     ) -> Dict:
         """
         Get impact report data (donations and FMV).
-        
+
+        Only includes non-voided DONATION and CLIENT DISTRIBUTION transactions.
+
         Args:
             start_date: Start date (optional)
             end_date: End date (optional)
@@ -145,7 +151,7 @@ class ReportingService:
         conn = self.db_manager.get_connection()
         cursor = conn.cursor()
         
-        # Get donations
+        # Get donations — P1-1: exclude voided transactions
         query = """
             SELECT 
                 ii.name,
@@ -157,6 +163,7 @@ class ReportingService:
             FROM inventory_transactions it
             JOIN inventory_items ii ON it.item_id = ii.id
             WHERE it.transaction_type = 'DONATION'
+              AND it.is_voided = 0
         """
         
         params = []
@@ -174,7 +181,7 @@ class ReportingService:
         cursor.execute(query, params)
         donation_rows = cursor.fetchall()
         
-        # Get distributions for total value distributed
+        # Get distributions for total value distributed — P1-1: exclude voided
         dist_query = """
             SELECT 
                 ii.name,
@@ -186,7 +193,8 @@ class ReportingService:
             FROM inventory_transactions it
             JOIN inventory_items ii ON it.item_id = ii.id
             WHERE it.transaction_type = 'DISTRIBUTION'
-            AND it.reason_code = 'CLIENT'
+              AND it.reason_code = 'CLIENT'
+              AND it.is_voided = 0
         """
         
         dist_params = []
@@ -354,12 +362,14 @@ class ReportingService:
         
         query += " ORDER BY it.transaction_date DESC"
         
+        # P1-4: Use parameterized LIMIT to prevent SQL injection
         if limit:
-            query += f" LIMIT {limit}"
-        
+            query += " LIMIT ?"
+            params.append(limit)
+
         cursor.execute(query, params)
         rows = cursor.fetchall()
-        
+
         transactions = []
         for row in rows:
             transactions.append({
@@ -434,7 +444,7 @@ class ReportingService:
             for row in cursor.fetchall()
         ]
         
-        # 3. Top Distributed Items (All Time)
+        # 3. Top Distributed Items (All Time) — P1-1: exclude voided transactions
         cursor.execute("""
             SELECT 
                 i.name,
@@ -442,6 +452,7 @@ class ReportingService:
             FROM inventory_transactions t
             JOIN inventory_items i ON t.item_id = i.id
             WHERE t.transaction_type = 'DISTRIBUTION'
+              AND t.is_voided = 0
             GROUP BY i.name
             ORDER BY total_distributed DESC
             LIMIT 5
@@ -464,7 +475,9 @@ class ReportingService:
     ) -> Dict:
         """
         Get purchases report data.
-        
+
+        Only includes non-voided PURCHASE transactions.
+
         Args:
             start_date: Start date (optional)
             end_date: End date (optional)
@@ -475,7 +488,7 @@ class ReportingService:
         conn = self.db_manager.get_connection()
         cursor = conn.cursor()
         
-        # Get purchases
+        # Get purchases — P1-1: exclude voided transactions
         query = """
             SELECT 
                 ii.name,
@@ -490,6 +503,7 @@ class ReportingService:
             JOIN inventory_items ii ON it.item_id = ii.id
             LEFT JOIN item_categories ic ON ii.category_id = ic.id
             WHERE it.transaction_type = 'PURCHASE'
+              AND it.is_voided = 0
         """
         
         params = []

@@ -41,13 +41,16 @@ class InventoryItem:
     def current_unit_cost_cents(self) -> int:
         """
         Calculate current weighted average unit cost in cents.
-        
+
+        Uses round() instead of int() to avoid systematic truncation that would
+        cause cumulative cost-basis drift over many transactions.
+
         Returns:
             int: Current unit cost in cents (0 if no inventory)
         """
         if self.quantity_on_hand <= 0:
             return 0
-        return int(self.total_cost_basis_cents / self.quantity_on_hand)
+        return round(self.total_cost_basis_cents / self.quantity_on_hand)
     
     @property
     def current_unit_cost_dollars(self) -> float:
@@ -144,9 +147,10 @@ class InventoryItem:
                 f"Requested: {quantity}"
             )
             
-        # Calculate COGS at current weighted average cost
+        # Calculate COGS at current weighted average cost.
+        # Use round() to avoid systematic truncation causing cost-basis drift.
         unit_cost_cents = self.current_unit_cost_cents
-        cogs_cents = int(quantity * unit_cost_cents)
+        cogs_cents = round(quantity * unit_cost_cents)
         
         # Calculate new totals
         new_quantity = self.quantity_on_hand - quantity

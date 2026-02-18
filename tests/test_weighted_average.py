@@ -106,7 +106,8 @@ class TestWeightedAverageCost:
         
         assert item.quantity_on_hand == 150
         assert item.total_cost_basis_cents == 10000  # Unchanged
-        assert item.current_unit_cost_cents == 66  # $0.66 (rounded down)
+        # 10000 / 150 = 66.67 → rounds to 67 (round() used instead of int() truncation)
+        assert item.current_unit_cost_cents == 67  # $0.67 (correctly rounded)
         
         # Transaction 3: Purchase 50 units @ $2.00/unit
         new_qty, new_basis = item.calculate_purchase_state(50, 10000)

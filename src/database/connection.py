@@ -93,28 +93,37 @@ class DatabaseManager:
     
     def backup(self, backup_dir: Optional[Path] = None) -> str:
         """
-        Create a backup of the database.
-        
+        Create a backup of the database using SQLite's online backup API.
+
+        Using sqlite3.Connection.backup() instead of shutil.copy2() ensures the
+        backup is consistent even with WAL mode active — a raw file copy can
+        produce a corrupt backup if the WAL has not been fully checkpointed.
+
         Args:
             backup_dir: Directory to store backups (defaults to AppData/backups)
-            
+
         Returns:
             str: Path to the backup file
         """
         # Use AppData backups directory by default
         if backup_dir is None:
             backup_dir = get_backups_dir()
-        
+
         # Create backup directory if it doesn't exist
         Path(backup_dir).mkdir(parents=True, exist_ok=True)
-        
+
         # Generate backup filename with timestamp
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         backup_path = os.path.join(backup_dir, f"inventory_backup_{timestamp}.db")
-        
-        # Copy database file
-        shutil.copy2(self.db_path, backup_path)
-        
+
+        # Use SQLite online backup API — WAL-safe and atomic
+        source_conn = self.get_connection()
+        dest_conn = sqlite3.connect(backup_path)
+        try:
+            source_conn.backup(dest_conn)
+        finally:
+            dest_conn.close()
+
         return backup_path
     
     def restore(self, backup_path: str):
@@ -179,21 +188,56 @@ class DatabaseManager:
 # Global database manager instance
 _db_manager: Optional[DatabaseManager] = None
 
+# Sentinel object used to distinguish "no argument passed" from None
+_UNSET = object()
 
-def get_db_manager(db_path: str = "inventory.db") -> DatabaseManager:
+
+def get_db_manager(db_path=_UNSET) -> DatabaseManager:
     """
-    Get the global database manager instance.
-    
+    Get or initialize the global DatabaseManager singleton.
+
+    On first call, ``db_path`` MUST be provided so the singleton can be
+    created pointing at the correct database file.  All subsequent calls
+    return the already-initialized singleton and the ``db_path`` argument
+    is intentionally ignored — this prevents silent path-switching bugs.
+
     Args:
-        db_path: Path to the database file
-        
+        db_path: Absolute path to the SQLite database file.  Required on
+                 the first call; omit (or pass any value) on later calls.
+
     Returns:
-        DatabaseManager: Global database manager instance
+        DatabaseManager: The application-wide database manager instance.
+
+    Raises:
+        RuntimeError: If called before the singleton has been initialized
+                      (i.e., ``db_path`` was not supplied on the first call).
     """
     global _db_manager
     if _db_manager is None:
+        if db_path is _UNSET:
+            raise RuntimeError(
+                "DatabaseManager has not been initialized. "
+                "Call get_db_manager(path) with an explicit database path "
+                "before accessing any service."
+            )
         _db_manager = DatabaseManager(db_path)
     return _db_manager
+
+
+def reset_db_manager() -> None:
+    """
+    Reset the global DatabaseManager singleton.
+
+    Closes the current connection (if any) and clears the singleton so that
+    the next call to ``get_db_manager(path)`` creates a fresh instance.
+
+    **Use ONLY in automated tests or at application shutdown.**
+    Calling this during normal application operation will break all services.
+    """
+    global _db_manager
+    if _db_manager is not None:
+        _db_manager.close()
+        _db_manager = None
 
 
 def init_database(db_path: str = "inventory.db", schema_path: str = None):

@@ -114,7 +114,7 @@ class DatabaseSelectionDialog(QDialog):
                 background-color: #2980b9;
             }
         """)
-        training_btn.setToolTip("Use inventory.db - Real inventory data")
+        production_btn.setToolTip("Use inventory.db - Real inventory data")
         production_btn.clicked.connect(lambda: self.select_mode("production"))
         layout.addWidget(production_btn)
         
@@ -232,43 +232,44 @@ def main():
     get_db_manager(db_path)
     logger.info(f"Database manager initialized with: {db_path}")
     
-    # Create and show main window with mode in title
-    window = MainWindow()
-    window.setWindowTitle(f"AI OPS Studio - [{mode_label}]")
-    
-    # Add visual indicator for training mode
-    if selection_dialog.selected_mode == "training":
-        # Store mode for potential UI indicators
-        window.setProperty("database_mode", "training")
-    else:
-        window.setProperty("database_mode", "production")
-    
-    window.show()
-    
-    # Global Exception Handler
+    # Global Exception Handler — registered BEFORE window.show() so startup
+    # exceptions are caught and written to the crash log.
     def exception_hook(exctype, value, traceback_obj):
         import traceback
         from PyQt6.QtWidgets import QMessageBox
 
         error_msg = "".join(traceback.format_exception(exctype, value, traceback_obj))
         logger.critical(f"Unhandled Exception: {error_msg}")
-        
+
         # Write to crash log
         log_path = os.path.join(appdata_dir, "crash_log.txt")
         with open(log_path, "w") as f:
             f.write(f"Timestamp: {datetime.now()}\n")
             f.write(error_msg)
-            
+
         # Attempt to show dialog
         try:
             QMessageBox.critical(None, "Critical Error", f"An unhandled error occurred:\n\n{value}\n\nLog saved to: {log_path}")
-        except:
+        except Exception:
             pass
-            
+
         sys.__excepthook__(exctype, value, traceback_obj)
         sys.exit(1)
 
     sys.excepthook = exception_hook
+
+    # Create and show main window with mode in title
+    window = MainWindow()
+    window.setWindowTitle(f"AI OPS Studio - [{mode_label}]")
+
+    # Add visual indicator for training mode
+    if selection_dialog.selected_mode == "training":
+        # Store mode for potential UI indicators
+        window.setProperty("database_mode", "training")
+    else:
+        window.setProperty("database_mode", "production")
+
+    window.show()
 
     # Run event loop
     sys.exit(app.exec())
