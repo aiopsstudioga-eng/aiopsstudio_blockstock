@@ -1,0 +1,5 @@
+SKU,Name,Category ID,Quantity,Unit Cost ($)
+TEST-001,Test Item 1,1,100,5.50
+TEST-002,Test Item 2,1,50.5,$10.00
+TEST-003,Test Item 3,2,0,0
+TEST-004,Test Item 4,2,25,2.00

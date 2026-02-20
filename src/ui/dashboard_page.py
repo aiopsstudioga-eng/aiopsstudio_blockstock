@@ -193,8 +193,16 @@ class DashboardPage(QWidget):
                 names = [i['name'] for i in items]
                 quantities = [i['quantity'] for i in items]
                 
+                # Truncate long names for display
+                display_names = []
+                for name in names:
+                    if len(name) > 20:
+                        display_names.append(name[:17] + "...")
+                    else:
+                        display_names.append(name)
+
                 # Vertical Bar chart
-                bars = ax2.bar(names, quantities, color='#3498db')
+                bars = ax2.bar(display_names, quantities, color='#3498db')
                 
                 # Add counts on top of bars
                 ax2.bar_label(bars, padding=3)
@@ -210,7 +218,8 @@ class DashboardPage(QWidget):
                 # Import pyplot locally for setp
                 import matplotlib.pyplot as plt
                 plt.setp(ax2.get_xticklabels(), rotation=45, ha='right')
-                self.distributed_figure.subplots_adjust(bottom=0.25, top=0.85)
+                # Increase bottom margin for rotated labels
+                self.distributed_figure.subplots_adjust(bottom=0.35, top=0.85)
             else:
                 ax2.text(0.5, 0.5, "No Data", ha='center', va='center')
                 

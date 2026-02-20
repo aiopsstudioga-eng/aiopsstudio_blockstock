@@ -1,7 +1,16 @@
-Testing CSV Import Logic...
-Created CSV at csv_import_test\import_data.csv
-Import Result: Success=4, Fail=0
-PASS: Item 1 imported with correct quantity (100) and cost (5.50)
-PASS: Item 2 imported with correct quantity (50.5) and cost (10.00)
-PASS: Item 3 imported with correct quantity (0)
-Cleanup failed: [WinError 32] The process cannot access the file because it is being used by another process: 'csv_import_test\\test_import.db'
+============================= test session starts =============================
+platform win32 -- Python 3.14.3, pytest-7.4.4, pluggy-1.6.0
+PyQt6 6.6.1 -- Qt runtime 6.6.1 -- Qt compiled 6.6.1
+rootdir: D:\Dev\GitHub\aiopsstudio_blockstock\aiopsstudio_blockstock
+configfile: pytest.ini
+plugins: cov-4.1.0, qt-4.3.1
+collected 57 items
+
+tests\test_csv_import.py .                                               [  1%]
+tests\test_data_service.py ....................                          [ 36%]
+tests\test_db_repair.py .                                                [ 38%]
+tests\test_integration.py ....                                           [ 45%]
+tests\test_void_workflow.py .................                            [ 75%]
+tests\test_weighted_average.py ..............                            [100%]
+
+============================= 57 passed in 3.50s ==============================

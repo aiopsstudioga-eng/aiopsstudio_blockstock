@@ -304,7 +304,7 @@ class ExcelReportGenerator:
         for item in data:
             forecast_data.append({
                 'SKU': item['sku'],
-                'Item Name': item['item_name'],  # Changed from 'name' based on typical service output, will verify
+                'Item Name': item['name'],  # Changed from 'name' based on typical service output, will verify
                 'Current Qty': item['current_quantity'],
                 'Daily Usage': item['daily_consumption_rate'],
                 'Projected (30d)': item['projected_quantity'],
