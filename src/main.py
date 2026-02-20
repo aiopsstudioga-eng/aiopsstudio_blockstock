@@ -269,7 +269,7 @@ def main():
     else:
         window.setProperty("database_mode", "production")
 
-    window.show()
+    window.showMaximized()
 
     # Run event loop
     sys.exit(app.exec())

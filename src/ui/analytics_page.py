@@ -8,11 +8,12 @@ from PyQt6.QtWidgets import (
     QComboBox, QSpinBox, QMessageBox, QGroupBox,
     QGridLayout, QScrollArea, QProgressBar
 )
-from PyQt6.QtCore import Qt, QSize
-from PyQt6.QtGui import QFont, QColor
+from PyQt6.QtCore import Qt, QSize, QUrl
+from PyQt6.QtGui import QFont, QColor, QDesktopServices
 from datetime import datetime
 
 from services.analytics_service import AnalyticsService
+from services.excel_generator import ExcelReportGenerator
 
 
 class AnalyticsPage(QWidget):
@@ -31,6 +32,8 @@ class AnalyticsPage(QWidget):
         self.analytics_service = AnalyticsService(db_path)
         self.current_forecast_days = 30
         self.current_lookback_days = 90
+        
+        self.excel_generator = ExcelReportGenerator()
         
         self.init_ui()
     
@@ -232,6 +235,23 @@ class AnalyticsPage(QWidget):
         generate_btn.clicked.connect(self.generate_forecast)
         controls.addWidget(generate_btn)
         
+        # Export button
+        export_btn = QPushButton("💾 Export to Excel")
+        export_btn.setStyleSheet("""
+            QPushButton {
+                background-color: #27ae60;
+                color: white;
+                padding: 8px 20px;
+                border-radius: 4px;
+                font-weight: bold;
+            }
+            QPushButton:hover {
+                background-color: #219150;
+            }
+        """)
+        export_btn.clicked.connect(self.export_forecast)
+        controls.addWidget(export_btn)
+        
         layout.addLayout(controls)
         
         layout.addSpacing(20)
@@ -331,6 +351,23 @@ class AnalyticsPage(QWidget):
         generate_btn.clicked.connect(self.generate_trends)
         controls.addWidget(generate_btn)
         
+        # Export button
+        export_btn = QPushButton("💾 Export to Excel")
+        export_btn.setStyleSheet("""
+            QPushButton {
+                background-color: #27ae60;
+                color: white;
+                padding: 8px 20px;
+                border-radius: 4px;
+                font-weight: bold;
+            }
+            QPushButton:hover {
+                background-color: #219150;
+            }
+        """)
+        export_btn.clicked.connect(self.export_trends)
+        controls.addWidget(export_btn)
+        
         layout.addLayout(controls)
         
         layout.addSpacing(20)
@@ -429,6 +466,23 @@ class AnalyticsPage(QWidget):
         """)
         generate_btn.clicked.connect(self.generate_donor_report)
         controls.addWidget(generate_btn)
+        
+        # Export button
+        export_btn = QPushButton("💾 Export to Excel")
+        export_btn.setStyleSheet("""
+            QPushButton {
+                background-color: #3498db;
+                color: white;
+                padding: 8px 20px;
+                border-radius: 4px;
+                font-weight: bold;
+            }
+            QPushButton:hover {
+                background-color: #2980b9;
+            }
+        """)
+        export_btn.clicked.connect(self.export_donor_report)
+        controls.addWidget(export_btn)
         
         layout.addLayout(controls)
         
@@ -707,3 +761,99 @@ class AnalyticsPage(QWidget):
             
         except Exception as e:
             QMessageBox.critical(self, "Error", f"Failed to generate donor report: {e}")
+            
+    def export_forecast(self):
+        """Export forecast to Excel."""
+        try:
+            days_ahead = self.forecast_days.value()
+            lookback_text = self.lookback_days.currentText()
+            lookback_days = int(lookback_text.split()[0])
+            
+            # Get fresh data
+            forecasts = self.analytics_service.get_inventory_forecast(
+                days_ahead=days_ahead,
+                lookback_days=lookback_days
+            )
+            
+            if not forecasts:
+                QMessageBox.warning(self, "No Data", "No forecast data to export.")
+                return
+                
+            # Generate Excel
+            filepath = self.excel_generator.generate_inventory_forecast_report(forecasts)
+            
+            # Ask to open
+            reply = QMessageBox.question(
+                self,
+                "Report Generated",
+                f"Forecast report generated successfully!\n\n"
+                f"Saved to: {filepath}\n\n"
+                f"Would you like to open the report?",
+                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
+            )
+            
+            if reply == QMessageBox.StandardButton.Yes:
+                QDesktopServices.openUrl(QUrl.fromLocalFile(filepath))
+                
+        except Exception as e:
+            QMessageBox.critical(self, "Error", f"Failed to export forecast: {e}")
+
+    def export_trends(self):
+        """Export trends to Excel."""
+        try:
+            year = int(self.trend_year.currentText())
+            
+            # Get fresh data
+            trends = self.analytics_service.get_seasonal_trends(year=year)
+            
+            if not trends['months']:
+                QMessageBox.warning(self, "No Data", "No trends data to export.")
+                return
+                
+            # Generate Excel
+            filepath = self.excel_generator.generate_seasonal_trends_report(trends)
+            
+            # Ask to open
+            reply = QMessageBox.question(
+                self,
+                "Report Generated",
+                f"Seasonal trends report generated successfully!\n\n"
+                f"Saved to: {filepath}\n\n"
+                f"Would you like to open the report?",
+                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
+            )
+            
+            if reply == QMessageBox.StandardButton.Yes:
+                QDesktopServices.openUrl(QUrl.fromLocalFile(filepath))
+                
+        except Exception as e:
+            QMessageBox.critical(self, "Error", f"Failed to export trends: {e}")
+
+    def export_donor_report(self):
+        """Export donor report to Excel."""
+        try:
+            # Get fresh data
+            summary = self.analytics_service.get_donor_impact_summary()
+            
+            if not summary['donors']:
+                QMessageBox.warning(self, "No Data", "No donor data to export.")
+                return
+                
+            # Generate Excel
+            filepath = self.excel_generator.generate_donor_impact_report(summary)
+            
+            # Ask to open
+            reply = QMessageBox.question(
+                self,
+                "Report Generated",
+                f"Donor impact report generated successfully!\n\n"
+                f"Saved to: {filepath}\n\n"
+                f"Would you like to open the report?",
+                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
+            )
+            
+            if reply == QMessageBox.StandardButton.Yes:
+                QDesktopServices.openUrl(QUrl.fromLocalFile(filepath))
+                
+        except Exception as e:
+            QMessageBox.critical(self, "Error", f"Failed to export donor report: {e}")

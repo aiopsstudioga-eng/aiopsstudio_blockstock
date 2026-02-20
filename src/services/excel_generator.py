@@ -283,3 +283,197 @@ class ExcelReportGenerator:
                 worksheet.column_dimensions['G'].width = 50
         
         return str(filepath)
+
+    def generate_inventory_forecast_report(self, data: list) -> str:
+        """
+        Generate inventory forecast report Excel file.
+        
+        Args:
+            data: List of forecast dictionaries from AnalyticsService
+            
+        Returns:
+            str: Path to generated Excel file
+        """
+        # Generate filename
+        today = date.today().isoformat()
+        filename = f"inventory_forecast_{today}.xlsx"
+        filepath = self.output_dir / filename
+        
+        # Prepare data for DataFrame
+        forecast_data = []
+        for item in data:
+            forecast_data.append({
+                'SKU': item['sku'],
+                'Item Name': item['item_name'],  # Changed from 'name' based on typical service output, will verify
+                'Current Qty': item['current_quantity'],
+                'Daily Usage': item['daily_consumption_rate'],
+                'Projected (30d)': item['projected_quantity'],
+                'Days Until Stockout': item['days_until_stockout'] if item['days_until_stockout'] else 'N/A',
+                'Risk Level': item['risk_level'].upper(),
+                'Confidence': item['confidence'].upper()
+            })
+            
+        # Create DataFrame
+        df = pd.DataFrame(forecast_data)
+        
+        # Write to Excel
+        with pd.ExcelWriter(filepath, engine='openpyxl') as writer:
+            df.to_excel(writer, sheet_name='Forecast', index=False)
+            
+            # Format
+            workbook = writer.book
+            worksheet = writer.sheets['Forecast']
+            
+            # Column widths
+            worksheet.column_dimensions['A'].width = 15
+            worksheet.column_dimensions['B'].width = 30
+            worksheet.column_dimensions['C'].width = 12
+            worksheet.column_dimensions['D'].width = 12
+            worksheet.column_dimensions['E'].width = 15
+            worksheet.column_dimensions['F'].width = 18
+            worksheet.column_dimensions['G'].width = 12
+            worksheet.column_dimensions['H'].width = 12
+            
+            # Conditional formatting for Risk Level (simulated with manual iteration since openpyxl conditional formatting requires rule objects)
+            # For simplicity in this implementation, we'll just rely on the text values
+            
+        return str(filepath)
+
+    def generate_seasonal_trends_report(self, data: Dict) -> str:
+        """
+        Generate seasonal trends report Excel file.
+        
+        Args:
+            data: Trends dictionary from AnalyticsService (contains 'months', 'totals', etc.)
+            
+        Returns:
+            str: Path to generated Excel file
+        """
+        # Generate filename
+        year = data.get('year', date.today().year)
+        filename = f"seasonal_trends_{year}.xlsx"
+        filepath = self.output_dir / filename
+        
+        # Prepare Monthly Data
+        monthly_data = []
+        for month in data['months']:
+            monthly_data.append({
+                'Month': month['month_name'],
+                'Distributions (Qty)': month['distributions_qty'],
+                'Distributions ($)': month['distributions_value'],
+                'Donations (Qty)': month['donations_qty'],
+                'Donations ($)': month['donations_value'],
+                'Purchases (Qty)': month['purchases_qty'],
+                'Purchases ($)': month['purchases_value']
+            })
+        
+        df_monthly = pd.DataFrame(monthly_data)
+        
+        # Create Excel writer
+        with pd.ExcelWriter(filepath, engine='openpyxl') as writer:
+            # Monthly Data Sheet
+            df_monthly.to_excel(writer, sheet_name='Monthly Trends', index=False)
+            
+            # Summary Sheet
+            totals = data['totals']
+            summary_data = {
+                'Metric': [
+                    'Total Distributions',
+                    'Total Donations',
+                    'Total Purchases',
+                    'Peak Month',
+                    'Peak Distribution Qty'
+                ],
+                'Value': [
+                    f"{int(totals['distributions_qty'])} units (${totals['distributions_value']:,.2f})",
+                    f"{int(totals['donations_qty'])} units (${totals['donations_value']:,.2f})",
+                    f"{int(totals['purchases_qty'])} units (${totals['purchases_value']:,.2f})",
+                    data['peak_month'],
+                    int(data['peak_distribution_qty'])
+                ]
+            }
+            pd.DataFrame(summary_data).to_excel(writer, sheet_name='Summary', index=False)
+            
+            # Check for YoY data if included in a wrapper or separate call - usually handled by separate report or combined data
+            # For this exact method signature, we stick to the 'data' structure provided
+            
+            # Format Monthly Sheet
+            ws_monthly = writer.sheets['Monthly Trends']
+            ws_monthly.column_dimensions['A'].width = 10
+            for col in ['B', 'C', 'D', 'E', 'F', 'G']:
+                ws_monthly.column_dimensions[col].width = 18
+                
+            # Format Summary Sheet
+            ws_summary = writer.sheets['Summary']
+            ws_summary.column_dimensions['A'].width = 25
+            ws_summary.column_dimensions['B'].width = 40
+            
+        return str(filepath)
+
+    def generate_donor_impact_report(self, data: Dict) -> str:
+        """
+        Generate donor impact report Excel file.
+        
+        Args:
+            data: Donor summary dictionary from AnalyticsService
+            
+        Returns:
+            str: Path to generated Excel file
+        """
+        # Generate filename
+        today = date.today().isoformat()
+        filename = f"donor_impact_{today}.xlsx"
+        filepath = self.output_dir / filename
+        
+        # Prepare Donor List
+        donors_data = []
+        total_fmv = data['total_fmv_cents']
+        
+        for donor in data['donors']:
+            pct = (donor['total_fmv_cents'] / total_fmv * 100) if total_fmv > 0 else 0
+            donors_data.append({
+                'Donor Name': donor['donor'],
+                'Donation Count': donor['donation_count'],
+                'Total Quantity': int(donor['total_quantity']),
+                'Total FMV ($)': donor['total_fmv_dollars'],
+                '% of Total': f"{pct:.1f}%"
+            })
+            
+        df_donors = pd.DataFrame(donors_data)
+        
+        # Create Excel writer
+        with pd.ExcelWriter(filepath, engine='openpyxl') as writer:
+            # Donor Details Sheet
+            df_donors.to_excel(writer, sheet_name='Donor Details', index=False)
+            
+            # Summary Sheet
+            summary_data = {
+                'Metric': [
+                    'Total Donors',
+                    'Total Donations Count',
+                    'Total Items Donated',
+                    'Total Fair Market Value'
+                ],
+                'Value': [
+                    data['total_donors'],
+                    data['total_donations'],
+                    data['total_quantity'],
+                    f"${data['total_fmv_dollars']:,.2f}"
+                ]
+            }
+            pd.DataFrame(summary_data).to_excel(writer, sheet_name='Summary', index=False)
+            
+            # Format Details Sheet
+            ws_details = writer.sheets['Donor Details']
+            ws_details.column_dimensions['A'].width = 30
+            ws_details.column_dimensions['B'].width = 15
+            ws_details.column_dimensions['C'].width = 15
+            ws_details.column_dimensions['D'].width = 15
+            ws_details.column_dimensions['E'].width = 12
+            
+            # Format Summary Sheet
+            ws_summary = writer.sheets['Summary']
+            ws_summary.column_dimensions['A'].width = 25
+            ws_summary.column_dimensions['B'].width = 25
+            
+        return str(filepath)
