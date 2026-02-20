@@ -244,60 +244,77 @@ class ReportingService:
     def get_stock_status_data(self) -> Dict:
         """
         Get stock status report data.
-        
+
         Returns:
-            Dict with stock status data
+            Dict with stock status data including items_by_category for
+            grouped PDF rendering.
         """
         conn = self.db_manager.get_connection()
         cursor = conn.cursor()
-        
-        # Get all active items with their status
+
+        # Join item_categories so each row carries a resolved category name.
+        # ORDER BY category then name so grouping is naturally ordered.
         cursor.execute("""
-            SELECT 
-                id,
-                sku,
-                name,
-                quantity_on_hand,
-                reorder_threshold,
-                total_cost_basis_cents,
-                category_id
-            FROM inventory_items
-            WHERE is_active = 1
-            ORDER BY name
+            SELECT
+                ii.id,
+                ii.sku,
+                ii.name,
+                ii.quantity_on_hand,
+                ii.reorder_threshold,
+                ii.total_cost_basis_cents,
+                ic.name AS category_name
+            FROM inventory_items ii
+            LEFT JOIN item_categories ic ON ii.category_id = ic.id
+            WHERE ii.is_active = 1
+            ORDER BY ic.name, ii.name
         """)
-        
+
         rows = cursor.fetchall()
-        
+
         items_below_threshold = []
         items_zero_stock = []
         items_ok = []
-        
+        items_by_category = {}   # OrderedDict-style: category_name -> [item_data, ...]
+
         total_items = len(rows)
         total_value_cents = 0
-        
+
         for row in rows:
             qty = row['quantity_on_hand']
             threshold = row['reorder_threshold']
             cost_basis = row['total_cost_basis_cents']
-            
+            category_name = row['category_name'] or 'Uncategorized'
+
             total_value_cents += cost_basis
-            
+
             item_data = {
                 'sku': row['sku'],
                 'name': row['name'],
                 'quantity': qty,
                 'threshold': threshold,
                 'value_cents': cost_basis,
-                'unit_cost_cents': int(cost_basis / qty) if qty > 0 else 0
+                'unit_cost_cents': int(cost_basis / qty) if qty > 0 else 0,
+                'category': category_name,
             }
-            
+
+            # Status buckets (for "Items Requiring Attention" section)
             if qty == 0:
                 items_zero_stock.append(item_data)
             elif qty < threshold:
                 items_below_threshold.append(item_data)
             else:
                 items_ok.append(item_data)
-        
+
+            # Category grouping (all items, regardless of status)
+            if category_name not in items_by_category:
+                items_by_category[category_name] = []
+            items_by_category[category_name].append(item_data)
+
+        # Ensure "Uncategorized" sorts last if present
+        if 'Uncategorized' in items_by_category:
+            uncategorized = items_by_category.pop('Uncategorized')
+            items_by_category['Uncategorized'] = uncategorized
+
         return {
             'total_items': total_items,
             'total_value_cents': total_value_cents,
@@ -307,7 +324,8 @@ class ReportingService:
             'items_zero_stock': items_zero_stock,
             'ok_count': len(items_ok),
             'below_threshold_count': len(items_below_threshold),
-            'zero_stock_count': len(items_zero_stock)
+            'zero_stock_count': len(items_zero_stock),
+            'items_by_category': items_by_category,
         }
     
     # ========================================================================

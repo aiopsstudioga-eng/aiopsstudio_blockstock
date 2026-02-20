@@ -71,6 +71,16 @@ class PDFReportGenerator:
             leading=11,
             textColor=colors.black
         )
+
+        self.category_header_style = ParagraphStyle(
+            'CategoryHeader',
+            parent=self.styles['Normal'],
+            fontSize=11,
+            fontName='Helvetica-Bold',
+            textColor=colors.HexColor('#1a5276'),
+            spaceBefore=10,
+            spaceAfter=4,
+        )
     
     def generate_financial_report(self, data: Dict) -> str:
         """
@@ -231,95 +241,66 @@ class PDFReportGenerator:
         story.append(summary)
         story.append(Spacer(1, 0.3 * inch))
         
-        # All inventory items
-        if data['items_ok']:
-            heading = Paragraph("All Inventory Items", self.heading_style)
-            story.append(heading)
-            
-            inventory_data = [['SKU', 'Item', 'Qty', 'Threshold', 'Status', 'Value']]
-            
-            # OK items first
-            for item in data['items_ok']:
-                name_para = Paragraph(item['name'], self.table_cell_style_black)
-                sku_para = Paragraph(item['sku'], self.table_cell_style_black)
-                value_dollars = item['value_cents'] / 100.0
-                inventory_data.append([
-                    sku_para,
-                    name_para,
-                    f"{item['quantity']:.1f}",
-                    f"{item['threshold']}",
-                    'OK',
-                    f"${value_dollars:,.2f}"
-                ])
-            
-            # Adjusted widths to fit 7.5" (Total available width)
-            # SKU: 1.2", Item: 2.5", Qty: 0.8", Threshold: 0.8", Status: 0.8", Value: 1.4"
-            inventory_table = Table(inventory_data, colWidths=[1.2*inch, 2.5*inch, 0.8*inch, 0.8*inch, 0.8*inch, 1.4*inch])
-            inventory_table.setStyle(TableStyle([
-                ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#27ae60')),
-                ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
-                ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
-                ('ALIGN', (5, 0), (5, -1), 'RIGHT'),  # Right-align value column
-                ('VALIGN', (0, 0), (-1, -1), 'TOP'), # Align top
-                ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-                ('FONTSIZE', (0, 0), (-1, 0), 10),
-                ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
-                ('BACKGROUND', (0, 1), (-1, -1), colors.white),
-                ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
-                ('FONTSIZE', (0, 1), (-1, -1), 9),
-            ]))
-            
-            story.append(inventory_table)
-            story.append(Spacer(1, 0.3 * inch))
+        # Inventory items grouped by category
+        if data.get('items_by_category'):
+            section_heading = Paragraph("Inventory by Category", self.heading_style)
+            story.append(section_heading)
+            story.append(Spacer(1, 0.1 * inch))
+
+            # SKU: 1.2", Item: 2.2", Qty: 0.8", Threshold: 0.8", Status: 1.1", Value: 1.4" = 7.5"
+            col_widths = [1.2*inch, 2.2*inch, 0.8*inch, 0.8*inch, 1.1*inch, 1.4*inch]
+
+            for category_name, items in data['items_by_category'].items():
+                # Category header
+                story.append(Paragraph(category_name.upper(), self.category_header_style))
+
+                table_rows = [['SKU', 'Item', 'Qty', 'Threshold', 'Status', 'Value']]
+
+                for item in items:
+                    name_para = Paragraph(item['name'], self.table_cell_style_black)
+                    sku_para = Paragraph(item['sku'], self.table_cell_style_black)
+                    value_dollars = item['value_cents'] / 100.0
+
+                    if item['quantity'] == 0:
+                        status = 'OUT OF STOCK'
+                    elif item['quantity'] < item['threshold']:
+                        status = 'LOW'
+                    else:
+                        status = 'OK'
+
+                    table_rows.append([
+                        sku_para,
+                        name_para,
+                        f"{item['quantity']:.1f}",
+                        f"{item['threshold']}",
+                        status,
+                        f"${value_dollars:,.2f}",
+                    ])
+
+                cat_table = Table(table_rows, colWidths=col_widths)
+                cat_table.setStyle(TableStyle([
+                    ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#27ae60')),
+                    ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+                    ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+                    ('ALIGN', (5, 0), (5, -1), 'RIGHT'),
+                    ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+                    ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+                    ('FONTSIZE', (0, 0), (-1, 0), 10),
+                    ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+                    ('BACKGROUND', (0, 1), (-1, -1), colors.white),
+                    ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
+                    ('FONTSIZE', (0, 1), (-1, -1), 9),
+                    # Highlight low/out-of-stock rows in the category table
+                    *[
+                        ('TEXTCOLOR', (4, i + 1), (4, i + 1),
+                         colors.HexColor('#e74c3c') if table_rows[i + 1][4] in ('OUT OF STOCK', 'LOW') else colors.black)
+                        for i in range(len(items))
+                    ],
+                ]))
+
+                story.append(cat_table)
+                story.append(Spacer(1, 0.25 * inch))
         
-        # Low stock items requiring attention
-        if data['items_below_threshold'] or data['items_zero_stock']:
-            heading = Paragraph("Items Requiring Attention", self.heading_style)
-            story.append(heading)
-            
-            alert_data = [['SKU', 'Item', 'Qty', 'Threshold', 'Status']]
-            
-            # Zero stock items first (critical)
-            for item in data['items_zero_stock']:
-                name_para = Paragraph(item['name'], self.table_cell_style_black)
-                sku_para = Paragraph(item['sku'], self.table_cell_style_black)
-                alert_data.append([
-                    sku_para,
-                    name_para,
-                    f"{item['quantity']:.1f}",
-                    f"{item['threshold']}",
-                    'OUT OF STOCK'
-                ])
-            
-            # Below threshold items
-            for item in data['items_below_threshold']:
-                name_para = Paragraph(item['name'], self.table_cell_style_black)
-                sku_para = Paragraph(item['sku'], self.table_cell_style_black)
-                alert_data.append([
-                    sku_para,
-                    name_para,
-                    f"{item['quantity']:.1f}",
-                    f"{item['threshold']}",
-                    'LOW'
-                ])
-            
-            # Adjusted widths to fit 7.5" (Total available width)
-            # SKU: 1.3", Item: 3.0", Qty: 1.0", Threshold: 1.0", Status: 1.2"
-            alert_table = Table(alert_data, colWidths=[1.3*inch, 3.0*inch, 1*inch, 1*inch, 1.2*inch])
-            alert_table.setStyle(TableStyle([
-                ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#e74c3c')),
-                ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
-                ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
-                ('VALIGN', (0, 0), (-1, -1), 'TOP'), # Align top
-                ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-                ('FONTSIZE', (0, 0), (-1, 0), 10),
-                ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
-                ('BACKGROUND', (0, 1), (-1, -1), colors.white),
-                ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
-                ('FONTSIZE', (0, 1), (-1, -1), 9),
-            ]))
-            
-            story.append(alert_table)
         
         # Build PDF
         doc.build(story)
