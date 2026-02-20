@@ -30,6 +30,33 @@ Each entry follows this structure:
 
 ## Development Entries
 
+### 2026-02-20 | Stock Status Report — Category Grouping & PDF Fixes
+
+**Phase:** Phase 2 Enhancement
+**Focus:** Reporting Quality & PDF Layout
+
+#### Accomplishments
+
+- 📊 **Category Grouping in Stock Status**:
+  - Modified `ReportingService.get_stock_status_data` to use a `LEFT JOIN` on `item_categories`.
+  - Implemented high-performance grouping via an ordered dictionary in the service layer.
+  - Items are now naturally sorted by category name, then item name.
+- 🎨 **PDF Report Overhaul**:
+  - Updated `PDFReportGenerator` to render the Stock Status report grouped by category.
+  - Each category now has its own heading and dedicated table.
+  - Added dynamic status text coloring (Red for LOW or OUT OF STOCK) directly in the category tables.
+  - **Removed** the redundant "Items Requiring Attention" section to streamline the report.
+- 🔧 **PDF Layout Fixes**:
+  - Widened the "Status" column from 0.8" to 1.1" to prevent "OUT OF STOCK" text from overflowing into the Value column.
+  - Hardened style management by moving `ParagraphStyle` definitions to `__init__` to avoid ReportLab duplicate-name warnings.
+
+#### Files Changed
+
+- `src/services/reporting_service.py` — Updated SQL query and grouping logic
+- `src/services/pdf_generator.py` — Complete refactor of stock status rendering and layout fixes
+
+---
+
 ### 2026-02-19 | Reports UI & Analytics Excel Export
 
 **Phase:** Phase 2 Enhancement / UI Polish
@@ -864,5 +891,5 @@ def get_platform():
 
 ---
 
-**Last Updated:** 2026-02-19
+**Last Updated:** 2026-02-20
 **Next Review:** 2026-02-21 (Weekly)
