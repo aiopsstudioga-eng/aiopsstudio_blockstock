@@ -300,6 +300,9 @@ class InventoryService:
         unit_cost_cents = int(unit_cost_dollars * 100)
         total_cost_cents = int(quantity * unit_cost_cents)
         
+        # Set transaction date explicitly using local time (not UTC)
+        transaction_date = datetime.now().isoformat()
+        
         with self.db_manager.transaction() as conn:
             cursor = conn.cursor()
             
@@ -328,10 +331,10 @@ class InventoryService:
             cursor.execute("""
                 INSERT INTO inventory_transactions
                 (item_id, transaction_type, quantity_change, unit_cost_cents, 
-                 supplier, notes)
-                VALUES (?, ?, ?, ?, ?, ?)
+                 supplier, notes, transaction_date)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
             """, (item_id, TransactionType.PURCHASE.value, quantity, 
-                  unit_cost_cents, supplier, notes))
+                  unit_cost_cents, supplier, notes, transaction_date))
             
             transaction_id = cursor.lastrowid
             
@@ -376,6 +379,9 @@ class InventoryService:
         fmv_cents = int(fair_market_value_dollars * 100)
         total_fmv_cents = int(quantity * fmv_cents)
         
+        # Set transaction date explicitly using local time (not UTC)
+        transaction_date = datetime.now().isoformat()
+        
         with self.db_manager.transaction() as conn:
             cursor = conn.cursor()
             
@@ -401,10 +407,10 @@ class InventoryService:
             cursor.execute("""
                 INSERT INTO inventory_transactions
                 (item_id, transaction_type, quantity_change, unit_cost_cents,
-                 fair_market_value_cents, donor, notes)
-                VALUES (?, ?, ?, ?, ?, ?, ?)
+                 fair_market_value_cents, donor, notes, transaction_date)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
             """, (item_id, TransactionType.DONATION.value, quantity, 
-                  0, total_fmv_cents, donor, notes))
+                  0, total_fmv_cents, donor, notes, transaction_date))
             
             transaction_id = cursor.lastrowid
             
@@ -445,6 +451,10 @@ class InventoryService:
         if quantity <= 0:
             raise ValueError("Distribution quantity must be positive")
         
+        # Set transaction date explicitly using local time (not UTC)
+        # This ensures the date matches what the user sees on their system
+        transaction_date = datetime.now().isoformat()
+        
         with self.db_manager.transaction() as conn:
             cursor = conn.cursor()
             
@@ -480,10 +490,11 @@ class InventoryService:
             cursor.execute("""
                 INSERT INTO inventory_transactions
                 (item_id, transaction_type, quantity_change, unit_cost_cents,
-                 total_financial_impact_cents, reason_code, notes)
-                VALUES (?, ?, ?, ?, ?, ?, ?)
+                 total_financial_impact_cents, reason_code, notes, transaction_date)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
             """, (item_id, TransactionType.DISTRIBUTION.value, -quantity,
-                  unit_cost_cents, total_financial_impact_cents, reason_str, notes))
+                  unit_cost_cents, total_financial_impact_cents, reason_str, notes,
+                  transaction_date))
             
             transaction_id = cursor.lastrowid
             
@@ -685,7 +696,7 @@ class InventoryService:
                 f"Void of Tx #{transaction_id}: {reason}",
                 transaction_id,
                 "system", # TODO: Pass actual user
-                datetime.now()
+                datetime.now().isoformat()
             ))
             correction_id = cursor.lastrowid
             
@@ -712,20 +723,17 @@ class InventoryService:
     def get_transactions_by_item(self, item_id: int) -> List[Transaction]:
         """
         Get all transactions for a specific item.
-        
-        Args:
-            item_id: ID of the item
-            
-        Returns:
-            List of Transaction objects
+
+        .. deprecated::
+            Use ``get_item_transactions(item_id)`` instead, which is identical
+            but also accepts an optional ``limit`` parameter.  This alias is
+            kept for UI back-compat and will be removed in a future release.
         """
-        conn = self.db_manager.get_connection()
-        cursor = conn.cursor()
-        
-        cursor.execute("""
-            SELECT * FROM inventory_transactions 
-            WHERE item_id = ? 
-            ORDER BY transaction_date DESC
-        """, (item_id,))
-        
-        return [Transaction.from_db_row(row) for row in cursor.fetchall()]
+        import warnings
+        warnings.warn(
+            "get_transactions_by_item() is deprecated; "
+            "use get_item_transactions(item_id) instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return self.get_item_transactions(item_id)

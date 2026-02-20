@@ -87,7 +87,51 @@ Each entry follows this structure:
 - `tests/test_weighted_average.py` — P2-4 (rounding assertion update)
 
 #### Next Steps
-- Continue with P3 items (void workflow tests, DataService tests, consolidate duplicate transaction history methods)
+- ~~Continue with P3 items (void workflow tests, DataService tests, consolidate duplicate transaction history methods)~~ ✅ Completed in next session
+
+---
+
+### 2026-02-17 | Code Review — P3 Implementation
+
+**Phase:** Quality Assurance / Test Coverage
+**Focus:** Void Workflow Tests, DataService Tests, Method Consolidation
+
+#### Accomplishments
+
+- 🧪 **P3-1 | Void Workflow Test Suite** (`tests/test_void_workflow.py`)
+  - 17 new tests across 4 classes: `TestVoidPurchase`, `TestVoidDonation`, `TestVoidDistribution`, `TestVoidGuards`
+  - Coverage: stock removal, cost-basis reversal, original-tx voided flag, CORRECTION record, `ref_transaction_id`, double-void guard, not-found guard, return-type guard
+  - All void paths (PURCHASE, DONATION, DISTRIBUTION) fully exercised
+
+- 🧪 **P3-2 | DataService Test Suite** (`tests/test_data_service.py`)
+  - 20 new tests across 6 classes
+  - CSV Import happy path: success count, DB persistence, quantity, unit cost, zero-qty items
+  - Currency parsing: `$` symbol stripping, comma-separated quantities
+  - Category resolution: integer Category ID, name lookup, auto-create new category
+  - Error handling: duplicate SKU fail count, missing required columns, nonexistent file
+  - CSV Export (items): file creation, header validation, data rows, bad-path returns False
+  - CSV Export (transactions): file creation, header validation
+
+- 🔧 **P3-3 | Consolidated Duplicate Transaction History Methods**
+  - `get_transactions_by_item()` was a duplicate of `get_item_transactions()` without limit support
+  - Converted `get_transactions_by_item()` to a `DeprecationWarning` alias delegating to `get_item_transactions()`
+  - Updated `src/ui/item_dialog.py` to call `get_item_transactions()` directly — eliminates the deprecation path in production
+  - Fixed `datetime.now()` passed raw to SQLite cursor in `void_transaction()` → now passes `.isoformat()` string, eliminating `DeprecationWarning: The default datetime adapter is deprecated` on Python 3.12+
+
+#### Testing
+- **55 tests passing** ✅ (37 new tests added this session)
+- Only remaining warning: `pandas/pyarrow` third-party deprecation notice (not project code)
+- Test isolation: all tests use `isolated_db` autouse fixture — zero shared state
+
+#### Files Changed
+- `tests/test_void_workflow.py` — new, 17 void workflow tests
+- `tests/test_data_service.py` — new, 20 DataService tests
+- `src/services/inventory_service.py` — P3-3 (method consolidation + datetime fix)
+- `src/ui/item_dialog.py` — P3-3 (call `get_item_transactions` directly)
+
+#### Next Steps
+- Install `pyarrow` to silence the pandas DeprecationWarning (or pin `pandas<3.0`)
+- Continue with remaining roadmap items
 
 ---
 
@@ -116,6 +160,18 @@ Each entry follows this structure:
 #### Next Steps
 - Test autocomplete with existing inventory data
 - Rebuild Windows `.exe` with this feature
+
+---
+
+### 2026-02-19 | Critical UI Fix: SKU Search
+**Phase:** Maintenance / Bug Fix
+**Focus:** Intake Dialog Usability
+
+#### Accomplishments
+- 🐛 **Fixed SKU Search in Intake Dialogs**:
+    - Problem: Attempting to search after selecting an autocomplete suggestion caused an "Item not found" error because the search used the full "SKU — Name" string instead of just the SKU.
+    - Fix: Updated `BaseIntakeDialog.search_item()` to parse the SKU from the display string (splitting on " — ") before querying the service.
+    - Enhancement: The input field now auto-updates to show only the clean SKU after a successful lookup, improving clarity.
 
 ---
 

@@ -164,7 +164,7 @@ class ItemDialog(QDialog):
         if not self.item:
             return
             
-        transactions = self.service.get_transactions_by_item(self.item.id)
+        transactions = self.service.get_item_transactions(self.item.id)
         # Sort by date desc
         # Sort by date desc (handle None dates safely)
         from datetime import datetime

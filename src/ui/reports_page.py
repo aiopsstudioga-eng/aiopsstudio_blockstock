@@ -54,13 +54,15 @@ class ReportsPage(QWidget):
         
         self.start_date = QDateEdit()
         self.start_date.setCalendarPopup(True)
-        self.start_date.setDate(QDate.currentDate().addMonths(-1))
+        # Default to 2 months ago to capture more historical data
+        self.start_date.setDate(QDate.currentDate().addMonths(-2))
         date_layout.addWidget(QLabel("From:"))
         date_layout.addWidget(self.start_date)
         
         self.end_date = QDateEdit()
         self.end_date.setCalendarPopup(True)
-        self.end_date.setDate(QDate.currentDate())
+        # Default to tomorrow to include any future-dated transactions
+        self.end_date.setDate(QDate.currentDate().addDays(1))
         date_layout.addWidget(QLabel("To:"))
         date_layout.addWidget(self.end_date)
         

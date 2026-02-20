@@ -7,7 +7,7 @@ Windows main application window with navigation.
 from PyQt6.QtWidgets import (
     QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
     QLabel, QPushButton, QStackedWidget, QMessageBox,
-    QCheckBox
+    QCheckBox, QFileDialog
 )
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QAction, QFont
@@ -104,6 +104,11 @@ class MainWindow(QMainWindow):
         backup_action.setShortcut(f"{modifier}+B")
         backup_action.triggered.connect(self.backup_database)
         file_menu.addAction(backup_action)
+        
+        restore_action = QAction("&Restore Database", self)
+        restore_action.setShortcut(f"{modifier}+Shift+R")
+        restore_action.triggered.connect(self.restore_database)
+        file_menu.addAction(restore_action)
         
         # Compact database option - use QAction with checkable
         self.compact_on_exit_action = QAction("Compact database on exit", self)
@@ -434,6 +439,50 @@ class MainWindow(QMainWindow):
                 self,
                 "Backup Failed",
                 f"Error backing up database:\n{e}"
+            )
+    
+    def restore_database(self):
+        """Restore database from a backup file."""
+        from utils.app_paths import get_backups_dir
+        
+        # Open file dialog to select backup
+        backups_dir = get_backups_dir()
+        file_path, _ = QFileDialog.getOpenFileName(
+            self,
+            "Select Backup File",
+            str(backups_dir),
+            "SQLite Database (*.db)"
+        )
+        
+        if not file_path:
+            return  # User cancelled
+        
+        # Confirm dialog
+        reply = QMessageBox.question(
+            self,
+            "Confirm Restore",
+            "This will replace ALL current data with the backup.\n"
+            "This action cannot be undone. Continue?",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
+        )
+        
+        if reply != QMessageBox.StandardButton.Yes:
+            return
+        
+        # Perform restore
+        try:
+            self.service.db_manager.restore(file_path)
+            QMessageBox.information(
+                self,
+                "Restore Complete",
+                "Database restored successfully.\n"
+                "Please restart the application."
+            )
+        except Exception as e:
+            QMessageBox.critical(
+                self,
+                "Restore Failed",
+                f"Error restoring database:\n{e}"
             )
     
     def show_new_item(self):

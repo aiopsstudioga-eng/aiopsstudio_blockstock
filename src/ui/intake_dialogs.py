@@ -261,12 +261,18 @@ class BaseIntakeDialog(QDialog):
 
     def search_item(self):
         """Look up the item by the current SKU input value."""
-        sku = self.sku_input.text().strip()
+        text = self.sku_input.text().strip()
+        # P1 Fix: Handle case where input contains the full "SKU — Name" string
+        # This happens if the user selects a completion but the text isn't cleared,
+        # or if specific signal timing causes search to run on the full string.
+        sku = text.split("  —  ")[0].strip() if "  —  " in text else text
+        
         if not sku:
             return
 
         item = self.service.get_item_by_sku(sku)
         if item:
+            self.sku_input.setText(item.sku)  # Ensure field shows just the SKU
             self._populate_item_fields(item)
             self.quantity_spin.setFocus()
             self.quantity_spin.selectAll()
