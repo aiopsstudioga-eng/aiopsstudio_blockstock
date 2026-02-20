@@ -1,17 +1,14 @@
 [Setup]
 ; Basic application information
 AppName=AI OPS Studio
-AppVersion=0.1.0-beta
-AppPublisher=AI Ops Studio LLC
-AppPublisherURL=https://aiopsstudio.com
-AppSupportURL=https://aiopsstudio.com/support
-AppUpdatesURL=https://aiopsstudio.com/updates
+AppVersion=1.0
+AppPublisher=AI Ops Studio
 DefaultDirName={autopf}\AIOpsStudio
 DefaultGroupName=AI OPS Studio
 AllowNoIcons=yes
 ; Output configuration
 OutputDir=packaging\output
-OutputBaseFilename=AIOpsStudio-Setup-0.1.0-beta
+OutputBaseFilename=AIOpsStudio-Setup-1.0
 SetupIconFile=resources\icons\icon.ico
 Compression=lzma
 SolidCompression=yes
