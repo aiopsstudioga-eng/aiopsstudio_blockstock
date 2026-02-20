@@ -4,7 +4,7 @@ Reports page for generating and viewing reports.
 
 from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QPushButton,
-    QLabel, QDateEdit, QMessageBox, QFileDialog
+    QLabel, QDateEdit, QMessageBox, QFileDialog, QGridLayout
 )
 from PyQt6.QtCore import Qt, QDate, QUrl
 from PyQt6.QtGui import QDesktopServices
@@ -13,6 +13,7 @@ from datetime import date
 from services.reporting_service import ReportingService
 from services.pdf_generator import PDFReportGenerator
 from services.excel_generator import ExcelReportGenerator
+from ui.components.report_card import ReportCard
 
 
 class ReportsPage(QWidget):
@@ -71,61 +72,67 @@ class ReportsPage(QWidget):
         
         layout.addSpacing(30)
         
-        # Report cards
-        cards_layout = QHBoxLayout()
-        cards_layout.setSpacing(20)
+        # Report cards Grid
+        grid_layout = QGridLayout()
+        grid_layout.setSpacing(25)  # Consistent gap between cards
         
         # Financial Report Card
-        financial_card = self.create_report_card(
-            "💰 Financial Report",
-            "Cost of Goods Distributed (COGS)\nPDF Export",
-            "#3498db",
-            self.generate_financial_report
+        financial_card = ReportCard(
+            title="Financial Report",
+            description="Cost of Goods Distributed (COGS)\nPDF Export",
+            icon="💰",
+            color="#3498db",
+            callback=self.generate_financial_report
         )
-        cards_layout.addWidget(financial_card)
+        grid_layout.addWidget(financial_card, 0, 0)
         
         # Impact Report Card
-        impact_card = self.create_report_card(
-            "🎁 Impact Report",
-            "Donations & Fair Market Value\nExcel Export",
-            "#27ae60",
-            self.generate_impact_report
+        impact_card = ReportCard(
+            title="Impact Report",
+            description="Donations & Fair Market Value\nExcel Export",
+            icon="🎁",
+            color="#27ae60",
+            callback=self.generate_impact_report
         )
-        cards_layout.addWidget(impact_card)
+        grid_layout.addWidget(impact_card, 0, 1)
         
         # Stock Status Card
-        stock_card = self.create_report_card(
-            "📊 Stock Status",
-            "Low stock alerts & inventory levels\nPDF Export",
-            "#e67e22",
-            self.generate_stock_report
+        stock_card = ReportCard(
+            title="Stock Status",
+            description="Low stock alerts & inventory levels\nPDF Export",
+            icon="📊",
+            color="#e67e22",
+            callback=self.generate_stock_report
         )
-        cards_layout.addWidget(stock_card)
-        
-        layout.addLayout(cards_layout)
-        
-        layout.addSpacing(20)
-        
-        # Second row of report cards
-        cards_layout_2 = QHBoxLayout()
-        cards_layout_2.setSpacing(20)
+        grid_layout.addWidget(stock_card, 0, 2)
         
         # Purchases Report Card
-        purchases_card = self.create_purchases_report_card()
-        cards_layout_2.addWidget(purchases_card)
+        purchases_card = ReportCard(
+            title="Purchases Report",
+            description="Purchase transactions\nExcel Export",
+            icon="📦",
+            color="#9b59b6",
+            callback=self.generate_purchases_report
+        )
+        # Add 'Today' button
+        purchases_card.add_extra_button("Today", self.generate_purchases_report_today)
+        grid_layout.addWidget(purchases_card, 1, 0)
         
         # Suppliers Report Card
-        suppliers_card = self.create_report_card(
-            "🏢 Suppliers Report",
-            "Supplier purchases \u0026 notes\nExcel Export",
-            "#16a085",
-            self.generate_suppliers_report
+        suppliers_card = ReportCard(
+            title="Suppliers Report",
+            description="Supplier purchases & notes\nExcel Export",
+            icon="🏢",
+            color="#16a085",
+            callback=self.generate_suppliers_report
         )
-        cards_layout_2.addWidget(suppliers_card)
+        grid_layout.addWidget(suppliers_card, 1, 1)
         
-        cards_layout_2.addStretch()
+        # Push items to top-left
+        grid_layout.setRowStretch(2, 1)
+        grid_layout.setColumnStretch(3, 1)
         
-        layout.addLayout(cards_layout_2)
+        layout.addLayout(grid_layout)
         
         layout.addSpacing(30)
         
@@ -153,131 +160,7 @@ class ReportsPage(QWidget):
         layout.addLayout(export_layout)
         
         layout.addStretch()
-    
-    def create_report_card(self, title: str, description: str, color: str, callback) -> QWidget:
-        """Create a report card widget."""
-        card = QWidget()
-        card.setFixedSize(250, 200)
-        card.setStyleSheet(f"""
-            QWidget {{
-                background-color: white;
-                border: 2px solid {color};
-                border-radius: 10px;
-            }}
-        """)
-        
-        card_layout = QVBoxLayout(card)
-        card_layout.setContentsMargins(20, 20, 20, 20)
-        
-        # Title
-        title_label = QLabel(title)
-        title_label.setStyleSheet(f"font-size: 16pt; font-weight: bold; color: {color};")
-        title_label.setWordWrap(True)
-        card_layout.addWidget(title_label)
-        
-        card_layout.addSpacing(10)
-        
-        # Description
-        desc_label = QLabel(description)
-        desc_label.setStyleSheet("font-size: 10pt; color: #7f8c8d;")
-        desc_label.setWordWrap(True)
-        card_layout.addWidget(desc_label)
-        
-        card_layout.addStretch()
-        
-        # Generate button
-        gen_btn = QPushButton("Generate")
-        gen_btn.setStyleSheet(f"""
-            QPushButton {{
-                background-color: {color};
-                color: white;
-                padding: 8px 16px;
-                border-radius: 4px;
-                font-weight: bold;
-            }}
-            QPushButton:hover {{
-                background-color: {self.darken_color(color)};
-            }}
-        """)
-        gen_btn.clicked.connect(callback)
-        card_layout.addWidget(gen_btn)
-        
-        return card
-    
-    def create_purchases_report_card(self) -> QWidget:
-        """Create purchases report card with dual buttons."""
-        card = QWidget()
-        card.setFixedSize(250, 200)
-        color = "#9b59b6"
-        card.setStyleSheet(f"""
-            QWidget {{
-                background-color: white;
-                border: 2px solid {color};
-                border-radius: 10px;
-            }}
-        """)
-        
-        card_layout = QVBoxLayout(card)
-        card_layout.setContentsMargins(20, 20, 20, 20)
-        
-        # Title
-        title_label = QLabel("📦 Purchases Report")
-        title_label.setStyleSheet(f"font-size: 16pt; font-weight: bold; color: {color};")
-        title_label.setWordWrap(True)
-        card_layout.addWidget(title_label)
-        
-        card_layout.addSpacing(10)
-        
-        # Description
-        desc_label = QLabel("Purchase transactions\nExcel Export")
-        desc_label.setStyleSheet("font-size: 10pt; color: #7f8c8d;")
-        desc_label.setWordWrap(True)
-        card_layout.addWidget(desc_label)
-        
-        card_layout.addStretch()
-        
-        # Buttons layout
-        buttons_layout = QHBoxLayout()
-        buttons_layout.setSpacing(5)
-        
-        # Generate button
-        gen_btn = QPushButton("Generate")
-        gen_btn.setStyleSheet(f"""
-            QPushButton {{
-                background-color: {color};
-                color: white;
-                padding: 8px 12px;
-                border-radius: 4px;
-                font-weight: bold;
-            }}
-            QPushButton:hover {{
-                background-color: #8e44ad;
-            }}
-        """)
-        gen_btn.clicked.connect(self.generate_purchases_report)
-        buttons_layout.addWidget(gen_btn)
-        
-        # Today button
-        today_btn = QPushButton("Today")
-        today_btn.setStyleSheet(f"""
-            QPushButton {{
-                background-color: {color};
-                color: white;
-                padding: 8px 12px;
-                border-radius: 4px;
-                font-weight: bold;
-            }}
-            QPushButton:hover {{
-                background-color: #8e44ad;
-            }}
-        """)
-        today_btn.clicked.connect(self.generate_purchases_report_today)
-        buttons_layout.addWidget(today_btn)
-        
-        card_layout.addLayout(buttons_layout)
-        
-        return card
-    
+
     def darken_color(self, hex_color: str) -> str:
         """Darken a hex color."""
         color_map = {

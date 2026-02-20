@@ -229,6 +229,7 @@ class MainWindow(QMainWindow):
             ("📥 Intake", 2),
             ("📤 Distribution", 3),
             ("📈 Reports", 4),
+            ("🔮 Analytics", 5),
         ]
         
         for text, index in nav_buttons:
@@ -270,6 +271,11 @@ class MainWindow(QMainWindow):
         from ui.reports_page import ReportsPage
         reports_page = ReportsPage(self.service.db_manager.db_path)
         self.content_stack.addWidget(reports_page)
+        
+        # Analytics page
+        from ui.analytics_page import AnalyticsPage
+        analytics_page = AnalyticsPage(self.service.db_manager.db_path)
+        self.content_stack.addWidget(analytics_page)
     
     def create_intake_page(self) -> QWidget:
         """Create intake page with purchase and donation buttons."""
