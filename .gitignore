@@ -62,3 +62,6 @@ htmlcov/
 
 # OS
 Thumbs.db
+
+# Dependencies
+packages/
