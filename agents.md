@@ -22,25 +22,30 @@ Last Updated: [YYYY-MM-DD]
 **Purpose**: [Brief description of what this agent does]
 
 **Capabilities**:
+
 - [Capability 1]
 - [Capability 2]
 - [Capability 3]
 
 **Configuration**:
+
 - **Model**: [e.g., GPT-4, Claude, etc.]
 - **Temperature**: [0.0-1.0]
 - **Max Tokens**: [number]
 - **System Prompt**: [Link or brief description]
 
 **Integration Points**:
+
 - [System/Service 1]
 - [System/Service 2]
 
 **Dependencies**:
+
 - [Dependency 1]
 - [Dependency 2]
 
 **Monitoring & Metrics**:
+
 - [Metric 1]
 - [Metric 2]
 
@@ -62,21 +67,26 @@ Last Updated: 2026-01-31
 **Purpose**: [Description]
 
 **Capabilities**:
+
 - [List capabilities]
 
 **Configuration**:
+
 - **Model**: [Model name]
 - **Temperature**: [Value]
 - **Max Tokens**: [Value]
 - **System Prompt**: [Description or path]
 
 **Integration Points**:
+
 - [Integration details]
 
 **Dependencies**:
+
 - [Dependencies]
 
 **Monitoring & Metrics**:
+
 - [Metrics]
 
 ---
@@ -155,6 +165,16 @@ Last Updated: 2026-01-31
 
 ---
 
+## Active Skills
+
+### 1. Devlog Maintenance (`@devlog-maintenance`)
+
+**Purpose**: Ensures all code changes are documented in `devlog.md`.
+**Usage**: Automatically trigger after task completion or when major changes are implemented.
+**Details**: Follows the protocol defined in `skills/devlog-maintenance/SKILL.md`.
+
+---
+
 ## Integration Architecture
 
 ```mermaid
@@ -207,18 +227,21 @@ graph TD
 ### Common Issues
 
 #### Agent Not Responding
+
 - Check API connectivity
 - Verify authentication tokens
 - Review rate limits
 - Check system status
 
 #### Poor Response Quality
+
 - Review system prompt
 - Adjust temperature settings
 - Increase max tokens
 - Provide more context
 
 #### High Latency
+
 - Optimize prompt length
 - Reduce max tokens
 - Check network connectivity
@@ -231,6 +254,7 @@ graph TD
 ### Version History
 
 #### v1.0.0 - 2026-01-31
+
 - Initial agents.md structure created
 - Added agent template
 - Defined best practices
@@ -241,16 +265,19 @@ graph TD
 ## Resources
 
 ### Documentation
+
 - [Link to API documentation]
 - [Link to model documentation]
 - [Link to integration guides]
 
 ### Tools
+
 - [Development tools]
 - [Testing frameworks]
 - [Monitoring dashboards]
 
 ### Support
+
 - **Technical Support**: [Contact information]
 - **Emergency Contact**: [Contact information]
 - **Documentation**: [Link to wiki/docs]
@@ -267,5 +294,5 @@ graph TD
 
 ---
 
-*Last Updated: 2026-01-31*
+*Last Updated: 2026-02-21*
 *Maintained by: AIOpsSoftware Team*
