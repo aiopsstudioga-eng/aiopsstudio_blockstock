@@ -302,7 +302,7 @@ class PurchaseDialog(BaseIntakeDialog):
         return "#2980b9"
 
     def _build_specific_form_rows(self, form: QFormLayout):
-        """Add purchase-specific form rows: quantity, unit cost, supplier."""
+        """Add purchase-specific form rows: quantity, unit cost, tax rate, cost breakdown, supplier."""
         # Quantity
         self.quantity_spin = QDoubleSpinBox()
         self.quantity_spin.setRange(0.01, 100_000)
@@ -312,20 +312,56 @@ class PurchaseDialog(BaseIntakeDialog):
         self.quantity_spin.valueChanged.connect(self._update_total)
         form.addRow("Quantity*:", self.quantity_spin)
 
-        # Unit Cost
+        # Unit Cost (pre-tax, per unit)
         self.unit_cost_spin = QDoubleSpinBox()
         self.unit_cost_spin.setRange(0.00, 100_000)
         self.unit_cost_spin.setDecimals(2)
         self.unit_cost_spin.setPrefix("$")
         self.unit_cost_spin.valueChanged.connect(self._update_total)
-        form.addRow("Unit Cost*:", self.unit_cost_spin)
+        form.addRow("Unit Cost* (pre-tax):", self.unit_cost_spin)
 
-        # Calculated total (read-only display)
-        self.total_label = QLabel("$0.00")
-        self.total_label.setStyleSheet(
-            f"font-size: 14pt; font-weight: bold; color: {self.THEME_COLOR};"
-        )
-        form.addRow("Total Cost:", self.total_label)
+        # Tax Rate — spinbox + quick-select preset combo side by side
+        tax_row_widget = QHBoxLayout()
+
+        self.tax_rate_spin = QDoubleSpinBox()
+        self.tax_rate_spin.setRange(0.00, 100.00)
+        self.tax_rate_spin.setDecimals(2)
+        self.tax_rate_spin.setValue(0.00)
+        self.tax_rate_spin.setSuffix("%")
+        self.tax_rate_spin.valueChanged.connect(self._update_total)
+        tax_row_widget.addWidget(self.tax_rate_spin)
+
+        self.tax_preset_combo = QComboBox()
+        self.tax_preset_combo.addItems(["0%", "2%", "4%", "6%", "8%", "Custom"])
+        self.tax_preset_combo.setFixedWidth(70)
+        self.tax_preset_combo.currentTextChanged.connect(self._on_tax_preset_changed)
+        tax_row_widget.addWidget(self.tax_preset_combo)
+
+        tax_container = QHBoxLayout()
+        tax_container.setContentsMargins(0, 0, 0, 0)
+        tax_container.addLayout(tax_row_widget)
+        tax_container.addStretch()
+
+        from PyQt6.QtWidgets import QWidget
+        tax_wrapper = QWidget()
+        tax_wrapper.setLayout(tax_container)
+        form.addRow("Tax Rate:", tax_wrapper)
+
+        # Cost breakdown — three read-only display labels
+        separator_style = "color: #7f8c8d; font-size: 10pt;"
+        bold_style = f"font-size: 14pt; font-weight: bold; color: {self.THEME_COLOR};"
+
+        self.subtotal_label = QLabel("$0.00")
+        self.subtotal_label.setStyleSheet(separator_style)
+        form.addRow("Subtotal:", self.subtotal_label)
+
+        self.tax_amount_label = QLabel("$0.00")
+        self.tax_amount_label.setStyleSheet(separator_style)
+        form.addRow("Tax Amount:", self.tax_amount_label)
+
+        self.grand_total_label = QLabel("$0.00")
+        self.grand_total_label.setStyleSheet(bold_style)
+        form.addRow("Grand Total:", self.grand_total_label)
 
         # Supplier dropdown
         self.supplier_combo = QComboBox()
@@ -340,38 +376,77 @@ class PurchaseDialog(BaseIntakeDialog):
         self.supplier_combo.lineEdit().setPlaceholderText("Select or type supplier...")
         form.addRow("Supplier:", self.supplier_combo)
 
+    def _on_tax_preset_changed(self, text: str):
+        """Load a preset tax rate into the spinbox when a preset is selected."""
+        preset_map = {"0%": 0.0, "2%": 2.0, "4%": 4.0, "6%": 6.0, "8%": 8.0}
+        if text in preset_map:
+            # Block signals to avoid double-triggering _update_total
+            self.tax_rate_spin.blockSignals(True)
+            self.tax_rate_spin.setValue(preset_map[text])
+            self.tax_rate_spin.blockSignals(False)
+            self._update_total()
+        # If "Custom" is chosen the user edits the spinbox directly — nothing to do.
+
     def _update_total(self):
-        """Recalculate and display total cost."""
-        total = self.quantity_spin.value() * self.unit_cost_spin.value()
-        self.total_label.setText(f"${total:,.2f}")
+        """Recalculate and display the three-part cost breakdown."""
+        qty = self.quantity_spin.value()
+        unit_cost = self.unit_cost_spin.value()
+        tax_rate_pct = self.tax_rate_spin.value()
+
+        subtotal = qty * unit_cost
+        tax_amount = subtotal * (tax_rate_pct / 100.0)
+        grand_total = subtotal + tax_amount
+
+        self.subtotal_label.setText(f"${subtotal:,.2f}")
+        self.tax_amount_label.setText(f"${tax_amount:,.2f}")
+        self.grand_total_label.setText(f"${grand_total:,.2f}")
 
     def _save(self):
-        """Validate inputs and record the purchase transaction."""
+        """Validate inputs and record the purchase transaction.
+
+        Tax is folded into the per-unit cost before calling the service so that
+        the weighted average COGS reflects the true tax-inclusive cost paid.
+        See rounding_strategy.md for the full rounding decision table.
+        """
         if not self.selected_item_id:
             QMessageBox.warning(self, "Validation Error", "Please enter a valid SKU")
             return
 
         quantity = self.quantity_spin.value()
         unit_cost = self.unit_cost_spin.value()
+        tax_rate_pct = self.tax_rate_spin.value()
         supplier = self.supplier_combo.currentText().strip() or None
         notes = self.notes_input.toPlainText().strip() or None
+
+        # Fold tax into the per-unit cost.  The service's int() conversion then
+        # truncates to the nearest cent (see rounding_strategy.md — Step 3).
+        tax_inclusive_unit_cost = unit_cost * (1.0 + tax_rate_pct / 100.0)
+
+        # Grand total for the success message (float display, not stored directly)
+        grand_total = quantity * tax_inclusive_unit_cost
 
         try:
             item, transaction = self.service.process_purchase(
                 item_id=self.selected_item_id,
                 quantity=quantity,
-                unit_cost_dollars=unit_cost,
+                unit_cost_dollars=tax_inclusive_unit_cost,
                 supplier=supplier,
                 notes=notes,
             )
 
+            tax_line = (
+                f"Tax Rate: {tax_rate_pct:.2f}%\n"
+                f"Grand Total Paid: ${grand_total:,.2f}\n"
+            ) if tax_rate_pct > 0 else ""
+
             QMessageBox.information(
                 self,
-                "Success",
-                f"Purchase recorded!\n\n"
+                "Purchase Recorded",
                 f"Item: {item.name}\n"
-                f"New Quantity: {item.quantity_on_hand:.1f}\n"
-                f"New Unit Cost: ${item.current_unit_cost_dollars:.2f}",
+                f"Units Added: {quantity:,.2f}\n"
+                f"{tax_line}"
+                f"New Avg Unit Cost (COGS): ${item.current_unit_cost_dollars:.2f}\n"
+                f"New Quantity On Hand: {item.quantity_on_hand:,.1f}",
             )
             self.accept()
 

@@ -30,6 +30,39 @@ Each entry follows this structure:
 
 ## Development Entries
 
+### 2026-02-21 | Purchase Tax Rate Feature & Devlog Cleanup
+
+**Phase:** Phase 2 Enhancement
+**Focus:** Purchase Intake UX — Tax-Inclusive Cost Tracking
+
+#### Accomplishments
+
+- 💰 **Purchase Dialog — Tax Rate Input**:
+  - Added a **Tax Rate %** `QDoubleSpinBox` (0–100%, 2 decimal places) to `PurchaseDialog` in `src/ui/intake_dialogs.py`.
+  - Added a quick-select preset `QComboBox` (0%, 2%, 4%, 6%, 8%, Custom) beside the spinbox for fast entry without typing.
+  - Replaced the single "Total Cost" display label with a three-row breakdown: **Subtotal**, **Tax Amount**, and **Grand Total** — all update live as the user types.
+  - Tax is folded into the per-unit cost before calling `process_purchase()`, so the weighted average COGS is automatically tax-inclusive with no changes to the service or database schema.
+  - Updated the success popup to display Units Added, Grand Total Paid (if tax > 0), and the new Avg Unit Cost (COGS).
+- 📄 **Rounding Strategy Document**:
+  - Created `rounding_strategy.md` in the project root documenting every rounding decision in the purchase flow (UI display → dollar-to-cents conversion → WAC display → COGS on distribution).
+
+#### Technical Decisions
+
+- **Tax folded at the UI layer**: Tax rate is multiplied into `unit_cost_dollars` before calling the service (`tax_inclusive_unit_cost = unit_cost × (1 + rate/100)`). The existing `int(dollars × 100)` truncation in `process_purchase()` handles sub-cent rounding conservatively (rounds down at point of entry). No service or schema changes needed.
+- **`int()` vs `round()` boundary**: Dollar-to-cents conversion uses `int()` (truncation — conservative on booking costs); WAC display and COGS use `round()` (fair rounding to prevent cumulative drift). Documented in `rounding_strategy.md`.
+
+#### Files Changed
+
+- `src/ui/intake_dialogs.py` — `PurchaseDialog`: added tax rate spinbox, preset combo, cost breakdown labels, `_on_tax_preset_changed()`, updated `_update_total()` and `_save()`
+- `rounding_strategy.md` — new file in project root
+
+#### Testing
+
+- All **18 existing tests passing** ✅ (`tests/test_weighted_average.py`, `tests/test_integration.py`)
+- No regressions — service and model layers unchanged
+
+---
+
 ### 2026-02-20 | Stock Status Report — Category Grouping & PDF Fixes
 
 **Phase:** Phase 2 Enhancement
@@ -595,14 +628,14 @@ This prevents the notorious floating-point precision errors that plague financia
 
 **Formula:**
 
-```
+```text
 New_Avg_Cost = (Total_Cost_Basis + New_Incoming_Cost) / 
                (Total_Qty_On_Hand + New_Incoming_Qty)
 ```
 
 **Example:**
 
-```
+```text
 Current State: 100 units @ $2.00/unit = $200 total
 New Purchase: 50 units @ $3.00/unit = $150 total
 New Average: ($200 + $150) / (100 + 50) = $2.33/unit
@@ -614,7 +647,7 @@ This ensures accurate COGS calculation when mixing donations ($0 cost) with purc
 
 Proposed directory structure:
 
-```
+```text
 AIOpsStudio-Inventory/
 ├── src/
 │   ├── main.py                 # Application entry point
@@ -720,15 +753,15 @@ None yet - planning phase went smoothly.
 ### Development Velocity
 
 | Week | Tasks Completed | Lines of Code | Tests Written | Bugs Fixed |
-|------|----------------|---------------|---------------|------------|
-| 1    | 5              | 0             | 0             | 0          |
-| 2    | -              | -             | -             | -          |
-| 3    | -              | -             | -             | -          |
+| ---- | --------------- | ------------- | ------------- | ---------- |
+| 1    | 5               | 0             | 0             | 0          |
+| 2    | -               | -             | -             | -          |
+| 3    | -               | -             | -             | -          |
 
 ### Code Quality Metrics
 
 | Metric | Target | Current |
-|--------|--------|---------|
+| ------ | ------ | ------- |
 | Test Coverage | 80% | 0% |
 | Pylint Score | 9.0+ | - |
 | Type Hint Coverage | 90% | - |
@@ -737,7 +770,7 @@ None yet - planning phase went smoothly.
 ### Performance Benchmarks
 
 | Operation | Target | Current |
-|-----------|--------|---------|
+| --------- | ------ | ------- |
 | Item Creation | < 100ms | - |
 | Transaction Processing | < 200ms | - |
 | Report Generation | < 5s | - |
@@ -749,11 +782,11 @@ None yet - planning phase went smoothly.
 
 ### Current Debt
 
-*None yet - project just started*
+None yet — project just started.
 
 ### Resolved Debt
 
-*N/A*
+N/A
 
 ---
 
@@ -825,11 +858,11 @@ def get_platform():
 
 ### Open Bugs
 
-*None yet*
+None yet.
 
 ### Resolved Bugs
 
-*N/A*
+N/A
 
 ---
 
@@ -837,7 +870,7 @@ def get_platform():
 
 ### From Stakeholders
 
-*To be collected during user testing*
+To be collected during user testing.
 
 ### Developer Ideas
 
@@ -852,11 +885,11 @@ def get_platform():
 
 ### Stakeholder Meetings
 
-*No meetings yet*
+No meetings yet.
 
 ### Code Review Sessions
 
-*No reviews yet*
+No reviews yet.
 
 ---
 
@@ -879,17 +912,17 @@ def get_platform():
 
 ### What Went Well
 
-*To be filled after each milestone*
+To be filled after each milestone.
 
 ### What Could Be Improved
 
-*To be filled after each milestone*
+To be filled after each milestone.
 
 ### Action Items
 
-*To be filled after each milestone*
+To be filled after each milestone.
 
 ---
 
-**Last Updated:** 2026-02-20
+**Last Updated:** 2026-02-21
 **Next Review:** 2026-02-21 (Weekly)
